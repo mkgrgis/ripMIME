@@ -56,13 +56,27 @@
 /* status return codes */
 #define MIME_STATUS_ZERO_FILE 100
 
+/* unpack modes */
+#define RIPMIME_UNPACK_MODE_TO_DIRECTORY 0
+#define RIPMIME_UNPACK_MODE_COUNT_FILES 1
+#define RIPMIME_UNPACK_MODE_LIST_FILES 2
+
+struct mime_output
+{
+    char *dir;
+    int unpack_mode;
+    // int fragment_number; will be used later
+};
+
+typedef struct mime_output RIPMIME_output;
+
 int MIME_version( void );
 size_t MIME_read_raw( char *src_mpname, char *dest_mpname, size_t rw_buffer_size );
 int MIME_read( char *mpname ); /* returns filesize in KB */
-int MIME_unpack( char *unpackdir, char *mpname, int current_recusion_level );
-//int MIME_unpack_single( char *unpackdir, char *mpname, int current_recusion_level );
-//int MIME_unpack_single_fp( char *unpackdir, FILE *fi, int current_recusion_level );
-//int MIME_unpack_mailbox( char *unpackdir, char *mpname, int current_recursion_level );
+int MIME_unpack( RIPMIME_output *unpack_metadata, char *mpname, int current_recusion_level );
+//int MIME_unpack_single( RIPMIME_output *unpack_metadata, char *mpname, int current_recusion_level );
+//int MIME_unpack_single_fp( RIPMIME_output *unpack_metadata, FILE *fi, int current_recusion_level );
+//int MIME_unpack_mailbox( RIPMIME_output *unpack_metadata, char *mpname, int current_recursion_level );
 int MIME_insert_Xheader( char *fname, char *xheader );
 int MIME_set_blankfileprefix( char *prefix );
 int MIME_set_recursion_level(int level);
@@ -115,8 +129,8 @@ char *MIME_get_subject( void );
 int MIME_init( void );
 int MIME_close( void );
 int MIME_set_tmpdir( char *tmpdir );
-//int MIME_postdecode_cleanup( char *unpackdir, struct SS_object *ss );
+//int MIME_postdecode_cleanup( RIPMIME_output *unpack_metadata, struct SS_object *ss );
 
-//int MIME_decode_TNEF( FILE *f, char *unpackdir, struct _header_info *hinfo, int keep );
+//int MIME_decode_TNEF( FILE *f, RIPMIME_output *unpack_metadata, struct _header_info *hinfo, int keep );
 
 #endif

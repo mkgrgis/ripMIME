@@ -37,7 +37,7 @@
 struct RIPMIME_globals
 {
    char *inputfile;
-   char *dir;
+   RIPMIME_output *output;
    int use_return_codes;
    int timeout;
    int quiet;
@@ -64,6 +64,8 @@ char help[] = "ripMIME -i <mime file> -d <directory>"
    "-e [headers file name] : Dump headers from mailpack (default '_headers_')\n"
    "-v : Turn on verbosity\n"
    "-q : Run quietly, do no report non-fatal errors\n"
+   "-l : list included mime fragments metadata to STDOUT delimited by '|' sign. Contains :\n"
+   "     internal id, attachment count, file count, recursion level, mime content type, file name\n"
    "\n"
    "--verbose-contenttype : Turn on verbosity of file content type\n"
    "--verbose-oldstyle : Uses the v1.2.x style or filename reporting\n"
@@ -201,14 +203,14 @@ int RIPMIME_parse_parameters (struct RIPMIME_globals *glb, int argc, char **argv
                case 'd':
                    if (argv[i][2] != '\0')
                    {
-                       glb->dir = &(argv[i][2]);
+                       glb->output->dir = &(argv[i][2]);
                    }
                    else
                    {
                        i++;
                        if (i < argc)
                        {
-                           glb->dir = argv[i];
+                           glb->output->dir = argv[i];
                        }
                        else
                        {
@@ -262,6 +264,10 @@ int RIPMIME_parse_parameters (struct RIPMIME_globals *glb, int argc, char **argv
                    }
                    break;      // blankzone storage option
 #endif
+
+               case 'l':
+                   glb->output->unpack_mode = RIPMIME_UNPACK_MODE_LIST_FILES;
+                   break;
 
                case 'v':
                    MIME_set_verbosity (1);
@@ -526,9 +532,11 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int RIPMIME_init (struct RIPMIME_globals *glb)
+int RIPMIME_init (struct RIPMIME_globals *glb, RIPMIME_output *o)
 {
-   glb->dir = defaultdir;
+   glb->output = o;
+   glb->output->dir = defaultdir;
+   glb->output->unpack_mode = RIPMIME_UNPACK_MODE_TO_DIRECTORY;
    glb->inputfile = NULL;
    glb->use_return_codes = 0;
    glb->timeout = 0;
@@ -556,7 +564,7 @@ Changes:
 \------------------------------------------------------------------*/
 void RIPMIME_signal_alarm( int sig )
 {
-   if (ripmime_globals->quiet == 0) LOGGER_log("%s:%d:RIPMIME_signal_alarm: ripMIME took too long to complete. Mailpack is \"%s\", output dir is \"%s\"",FL, ripmime_globals->inputfile, ripmime_globals->dir );
+   if (ripmime_globals->quiet == 0) LOGGER_log("%s:%d:RIPMIME_signal_alarm: ripMIME took too long to complete. Mailpack is \"%s\", output dir is \"%s\"",FL, ripmime_globals->inputfile, ripmime_globals->output->dir );
    exit(RIPMIME_ERROR_TIMEOUT);
 }
 
@@ -587,8 +595,8 @@ int RIPMIME_unpack_single( struct RIPMIME_globals *glb, char *fname )
        alarm(glb->timeout);
    }
 
-   MIMEH_set_outputdir (glb->dir);
-   result = MIME_unpack (glb->dir, fname, 0);
+   MIMEH_set_outputdir (glb->output->dir);
+   result = MIME_unpack (glb->output, fname, 0);
 
    // do any last minute things
 
@@ -686,6 +694,7 @@ Changes:
 int main (int argc, char **argv)
 {
    struct RIPMIME_globals glb;
+   RIPMIME_output mime_output;
    int result = 0;
 
    /* if the user has just typed in "ripmime" and nothing else, then we had better give them
@@ -711,7 +720,7 @@ int main (int argc, char **argv)
    // Perform system initialisations
 
    MIME_init ();
-   RIPMIME_init (&glb);
+   RIPMIME_init (&glb, &mime_output);
 
    // Setup our default behaviours */
 
@@ -737,16 +746,16 @@ int main (int argc, char **argv)
 
    // clean up the output directory name if required (remove any trailing /'s, as suggested by James Cownie 03/02/2001
 
-   if (glb.dir[strlen (glb.dir) - 1] == '/')
+   if (glb.output->dir[strlen (glb.output->dir) - 1] == '/')
    {
-       glb.dir[strlen (glb.dir) - 1] = '\0';
+       glb.output->dir[strlen (glb.output->dir) - 1] = '\0';
    }
 
    // Create the output directory required as specified by the -d parameter
 
-   if (glb.dir != defaultdir)
+   if (glb.output->dir != defaultdir)
    {
-       result = mkdir (glb.dir, S_IRWXU);
+       result = mkdir (glb.output->dir, S_IRWXU);
 
        // if we had a problem creating a directory, and it wasn't just
        // due to the directory already existing, then we have a bit of
@@ -756,7 +765,7 @@ int main (int argc, char **argv)
        if ((result == -1) && (errno != EEXIST))
        {
            LOGGER_log("ripMIME: Cannot create directory '%s' (%s)\n",
-                   glb.dir, strerror (errno));
+                   glb.output->dir, strerror (errno));
 
            return RIPMIME_ERROR_CANT_CREATE_OUTPUT_DIR;
        }
