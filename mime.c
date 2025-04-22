@@ -1072,42 +1072,44 @@ int MIME_test_uniquename( char *path, char *fname, int method )
 }
 
 /*------------------------------------------------------------------------
-Procedure:     MIME_is_file_mime ID:1
+Procedure:     MIME_is_RFC
 Purpose:       Determines if the file handed to it is a MIME type email file.
 
-Input:         file name to analyze
-Output:        Returns 0 for NO, 1 for YES, -1 for "Things di
+Input:         FILE object to analyze
+Output:        0 if not RFC,
+               1 if the file represents RFC content,
+               -1 oherwise
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_is_file_RFC822( char *fname )
+int MIME_is_file_RFC822( FILE *f )
 {
     char conditions[16][16] = {
-        "Received: ", "From: ", "Subject: ", "Date: ", "Content-", "content-", "from: ", "subject: ", "date: ", "boundary=", "Boundary=", "MIME-Version"        };
+        "Received: ",
+        "From: ",
+        "Subject: ",
+        "Date: ",
+        "Content-",
+        "content-",
+        "from: ",
+        "subject: ",
+        "date: ",
+        "boundary=",
+        "Boundary=",
+        "MIME-Version"        };
     int result = 0;
     int flag_mime_version = 0;
     int hitcount = 0;
     int linecount = 100; // We should only need to read the first 10 lines of any file.
     char *line;
-    FILE *f;
-
-    if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_is_file_RFC822:DEBUG: Testing %s for RFC822 headers",FL,fname);
-
-    f = fopen(fname,"r");
-    if (!f)
-    {
-        if (glb.quiet == 0)
-        {
-            LOGGER_log("%s:%d:MIME_is_file_mime:ERROR: cannot open file '%s' for reading (%s)", FL, fname,strerror(errno));
-        }
-        return 0;
-    }
 
     line = malloc(sizeof(char) *1025);
     if (!line)
     {
         LOGGER_log("%s:%d:MIME_is_file_mime:ERROR: cannot allocate memory for read buffer", FL);
-        return 0;
+        return -1;
     }
+
+    fseek(f, 0, SEEK_SET);
 
     while (((!flag_mime_version)||(hitcount < 2))&&(fgets(line,1024,f))&&(linecount--))
     {
@@ -1133,12 +1135,45 @@ int MIME_is_file_RFC822( char *fname )
         }
     }
 
-    fclose(f);
-    if (hitcount >= 2 && flag_mime_version) result = 1;
-    else result = 0;
-    if (line) free(line);
-    if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_is_file_RFC822:DEBUG: Hit count = %d, result = %d",FL,hitcount,result);
+    if (hitcount >= 2 && flag_mime_version)
+       result = 1;
+    else 
+       result = 0;
+    if (line)
+       free(line);
+    if (MIME_DNORMAL)
+     LOGGER_log("%s:%d:MIME_is_file_RFC822:DEBUG: Hit count = %d, result = %d",FL,hitcount,result);
     return result;
+}
+
+/*------------------------------------------------------------------------
+Procedure:     MIME_is_diskfile_RFC822
+Purpose:       Determines if the file handed to it is a MIME type email file.
+
+Input:         file name to analyze
+Output:        Returns 0 for NO, 1 for YES, -1 for "Things di
+Errors:
+------------------------------------------------------------------------*/
+int MIME_is_diskfile_RFC822( char *fname )
+{
+    int result = 0;
+    FILE *f;
+
+    if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_is_diskfile_RFC822:DEBUG: Testing %s for RFC822 headers",FL,fname);
+
+    f = fopen(fname,"r");
+    if (!f)
+    {
+        if (glb.quiet == 0)
+        {
+            LOGGER_log("%s:%d:MIME_is_diskfile_RFC822:ERROR: cannot open file '%s' for reading (%s)", FL, fname,strerror(errno));
+        }
+        return 0;
+    }
+
+    result = MIME_is_file_RFC822(f);
+    fclose(f);
+    return result == 1;
 }
 
 /*------------------------------------------------------------------------
@@ -1379,7 +1414,7 @@ int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIM
     FILE *of;                           // output file
     int linecount = 0;                  // The number of lines
     int file_has_uuencode = 0;          // Flag to indicate this text has UUENCODE in it
-    char fullfilename[1024]="";     // Filename of the output file
+    char fullfilename[1024]="";         // Filename of the output file
     char line[1024];                    // The input lines from the file we're decoding
     char *get_result = &line[0];
     int lastlinewasboundary = 0;
@@ -1922,7 +1957,7 @@ int MIME_doubleCR_decode( char *filename, RIPMIME_output *unpack_metadata, struc
     // Works for ripMIME    snprintf(h.filename, sizeof(h.filename), "%s/%s", unpackdir, p);
     snprintf(h.filename, sizeof(h.filename), "%s", p); /// Works for Xamime
     if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_doubleCR_decode:DEBUG: header.filename = %s", FL, h.filename );
-    if (MIME_is_file_RFC822(filename))
+    if (MIME_is_diskfile_RFC822(filename))
     {
         if (MIME_VERBOSE) LOGGER_log("Attempting to decode Double-CR delimeted MIME attachment '%s'\n",filename);
         result = MIME_unpack( unpack_metadata, filename, current_recursion_level ); // 20040305-1303:PLD - Capture the result of the unpack and propagate up
@@ -2443,7 +2478,7 @@ int MIME_decode_encoding( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct
             {
                 snprintf(hinfo->scratch,sizeof(hinfo->scratch),"%s/%s",unpack_metadata->dir,hinfo->filename);
                 LOGGER_log("%s:%d:MIME_decode_encoding:DEBUG:REMOVEME: Testing for RFC822 headers in file %s",FL,hinfo->scratch);
-                if (MIME_is_file_RFC822(hinfo->scratch) > 0 )
+                if (MIME_is_diskfile_RFC822(hinfo->scratch) > 0 )
                 {
                     // 20040305-1304:PLD: unpack the file, propagate result upwards
                     result = MIME_unpack_single( unpack_metadata, hinfo->scratch, (hinfo->current_recursion_level+1),ss );
@@ -2718,7 +2753,7 @@ int MIME_handle_plain( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MI
     {
         /** Test for RFC822 content... if so, go decode it **/
         snprintf(h->scratch,sizeof(h->scratch),"%s/%s",unpack_metadata->dir,h->filename);
-        if (MIME_is_file_RFC822(h->scratch)==1)
+        if (MIME_is_diskfile_RFC822(h->scratch)==1)
         {
             /** If the file is RFC822, then decode it using MIME_unpack_single() **/
             if (glb.header_longsearch != 0) MIMEH_set_header_longsearch(glb.header_longsearch);
@@ -2995,7 +3030,7 @@ int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
                                 if(mime_fname != NULL)
                                 {
                                     if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_unpack_stage2:DEBUG: Testing '%s' for email type",FL,mime_fname);
-                                    if (MIME_is_file_RFC822(mime_fname))
+                                    if (MIME_is_diskfile_RFC822(mime_fname))
                                     {
                                         //MIME_unpack_single( unpackdir, mime_fname, (hinfo->current_recursion_level+1), ss);
                                         MIME_unpack_single( unpack_metadata, mime_fname, current_recursion_level+1,ss);
