@@ -1305,7 +1305,7 @@ int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIME
     snprintf(fullpath,sizeof(fullpath),"%s/%s",unpack_metadata->dir,hinfo->filename);
     result_f = fopen(fullpath, "w");
 
-    if (result_f == -1)
+    if (result_f == NULL)
     {
         LOGGER_log("%s:%d:MIME_decode_raw:ERROR: cannot open file %s for writing. (%s)\n\n",FL,fullpath,strerror(errno));
         return -1;
@@ -1995,7 +1995,7 @@ size_t MIME_read_raw( char *src_mpname, char *dest_mpname, size_t rw_buffer_size
 
     /* open up our input file */
     result_f = fopen(dest_mpname, "w");
-    if (result_f == -1) {
+    if (result_f == NULL) {
         LOGGER_log("%s:%d:MIME_read_raw:ERROR: Cannot open '%s' for writing. (%s)",FL, dest_mpname, strerror(errno));
         return -1;
     }
