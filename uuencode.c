@@ -79,10 +79,10 @@ int uuencode_error;   // this contains the error code for parents to check if th
   Function Name	: UUENCODE_init
   Returns Type	: int
   ----Parameter List
-  1. void , 
+  1. void ,
   ------------------
-  Exit Codes	: 
-  Side Effects	: 
+  Exit Codes	:
+  Side Effects	:
   --------------------------------------------------------------------
 Comments:
 
@@ -106,10 +106,10 @@ int UUENCODE_init( void )
   Function Name	: UUENCODE_set_debug
   Returns Type	: int
   ----Parameter List
-  1. int level , 
+  1. int level ,
   ------------------
-  Exit Codes	: 
-  Side Effects	: 
+  Exit Codes	:
+  Side Effects	:
   --------------------------------------------------------------------
 Comments:
 
@@ -127,10 +127,10 @@ int UUENCODE_set_debug( int level )
   Function Name	: UUENCODE_set_verbosity
   Returns Type	: int
   ----Parameter List
-  1. int level , 
+  1. int level ,
   ------------------
-  Exit Codes	: 
-  Side Effects	: 
+  Exit Codes	:
+  Side Effects	:
   --------------------------------------------------------------------
 Comments:
 
@@ -148,10 +148,10 @@ int UUENCODE_set_verbosity( int level )
   Function Name	: UUENCODE_set_verbosity_contenttype
   Returns Type	: int
   ----Parameter List
-  1. int level , 
+  1. int level ,
   ------------------
-  Exit Codes	: 
-  Side Effects	: 
+  Exit Codes	:
+  Side Effects	:
   --------------------------------------------------------------------
 Comments:
 
@@ -169,10 +169,10 @@ int UUENCODE_set_verbosity_contenttype( int level )
   Function Name	: UUENCODE_set_decode
   Returns Type	: int
   ----Parameter List
-  1. int level , 
+  1. int level ,
   ------------------
-  Exit Codes	: 
-  Side Effects	: 
+  Exit Codes	:
+  Side Effects	:
   --------------------------------------------------------------------
 Comments:
 
@@ -190,10 +190,10 @@ int UUENCODE_set_decode( int level )
   Function Name	: UUENCODE_set_doubleCR_mode
   Returns Type	: int
   ----Parameter List
-  1. int level , 
+  1. int level ,
   ------------------
-  Exit Codes	: 
-  Side Effects	: 
+  Exit Codes	:
+  Side Effects	:
   --------------------------------------------------------------------
 Comments:
 
@@ -211,11 +211,11 @@ int UUENCODE_set_doubleCR_mode( int level )
   Function Name	: UUENCODE_set_filename_report_fn
   Returns Type	: int
   ----Parameter List
-  1. int (*ptr_to_fn)(char *, 
-  2.  char *) , 
+  1. int (*ptr_to_fn)(char *,
+  2.  char *) ,
   ------------------
-  Exit Codes	: 
-  Side Effects	: 
+  Exit Codes	:
+  Side Effects	:
   --------------------------------------------------------------------
 Comments:
 
@@ -258,7 +258,7 @@ int UUENCODE_is_uuencode_header( char *line )
 	//		colon after the BEGIN
 	//
 	// 2003-08-12:PLD:Added *(bp+6) test as recommended by Bernard Fischer to ensure there's more
-	//						data after the begin	
+	//						data after the begin
 
 	if ((bp)&&(strncasecmp(bp,"begin",5)==0)&&(*(bp+5)!=':')&&(isspace((int)*(bp+5)))&&(*(bp+6)))
 	{
@@ -346,11 +346,11 @@ int UUENCODE_is_diskfile_uuencoded( char *fname )
   3.  char *input_filename,	The fully pathed input filename, containing UU data
   4.  char *out_filename,		Pointer to a buffer where we will write the filename of the UU data
   5.  int out_filename_size, out_filename buffers size
-  6.  int decode_whole_file, 0 == only first segment, >0 == all 
-  7.  int keep ,					Keep the files we create, don't delete 
+  6.  int decode_whole_file, 0 == only first segment, >0 == all
+  7.  int keep ,					Keep the files we create, don't delete
   ------------------
   Exit Codes	:		Returns the number of attachments decoded in the data
-  Side Effects	: 
+  Side Effects	:
   --------------------------------------------------------------------
 Comments:
 
@@ -418,7 +418,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *unpackdir, char *input_filename, ch
 
 		if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Creation done. [FFGET-FILE=%p, FILE=%p]\n", FL, finf, inf);
 	} else {
-		if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: File handle already exists to read from, using",FL);	
+		if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: File handle already exists to read from, using",FL);
 		finf = f;
 	}
 
@@ -447,7 +447,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *unpackdir, char *input_filename, ch
 			{
 				if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: BUFFER: \n%s\n", FL, buf);
 
-				// Check for the presence of 'BEGIN', but make sure it's not followed by a 
+				// Check for the presence of 'BEGIN', but make sure it's not followed by a
 				//		colon ( which indicates a VCARD instead of UUENCODE
 
 				if ((strncasecmp(buf,"begin",5)==0)&&(buf[5] !=':')&&(isspace((int)buf[5])))

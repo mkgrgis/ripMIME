@@ -180,7 +180,7 @@ struct MIME_globals {
     //      wise, any consequent parsing of sub-message bodies
     //      will result in the clobbering of the hinfo struct
     char subject[_MIME_STRLEN_MAX];
-    
+
     int mime_count;
 };
 
@@ -1126,7 +1126,7 @@ int MIME_is_file_RFC822( FILE *f )
 
     if (hitcount >= 2 && flag_mime_version)
        result = 1;
-    else 
+    else
        result = 0;
     if (line)
        free(line);
@@ -1600,11 +1600,11 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
     int of; /* output file pointer */
     if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_decode_64:DEBUG: attempting to decode '%s'", FL, hinfo->filename);
 
-    glb.mime_count++;    
+    glb.mime_count++;
     if (unpack_metadata->unpack_mode == RIPMIME_UNPACK_MODE_LIST_FILES)
     {
         MIME_fprintf_decoded(unpack_metadata, hinfo);
-    }    
+    }
 
     /* generate the MIME_filename, and open it up... */
     if (glb.unique_names) MIME_test_uniquename( unpack_metadata->dir, hinfo->filename, glb.rename_method );
@@ -2167,7 +2167,7 @@ int MIME_init( void )
     glb.blankfileprefix_expliticly_set = 0;
 
     glb.subject[0]='\0';
-    
+
     glb.mime_count = 0;
 
     return 0;
@@ -2492,7 +2492,7 @@ int MIME_decode_encoding( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct
         case MIME_ERROR_RECURSION_LIMIT_REACHED:
             return result;
             break;
-		  default: 
+		  default:
 				return result;
     }
 
