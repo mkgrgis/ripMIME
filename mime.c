@@ -1329,9 +1329,8 @@ int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIME
             if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_decode_raw:DEBUG: Boundary located - breaking out.\n",FL);
             break;
         } else {
-            size_t bc;
             if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_decode_raw:DEBUG: writing: %s\n",FL, buffer);
-            bc = write( fo, buffer, readcount);
+            write( fo, buffer, readcount);
         }
     }
 
@@ -1458,10 +1457,9 @@ int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIM
             {
                 if (hinfo->content_transfer_encoding == _CTRANS_ENCODING_QP)
                 {
-                    size_t bc;
                     if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_DNORMAL:DEBUG: Hit a boundary on the line",FL);
                     decodesize = MDECODE_decode_qp_text(line);
-                    bc = fwrite(line, 1, decodesize, of);
+                    fwrite(line, 1, decodesize, of);
 
                 } else {
                     fprintf(of,"%s",line);
@@ -1646,7 +1644,6 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
     /* do an endless loop, as we're -breaking- out later */
     while (1)
     {
-        int lastchar_was_linebreak=0;
         /* Initialise the decode buffer */
         input[0] = input[1] = input[2] = input[3] = 0; // was '0' - Stepan Kasal patch
         /* snatch 4 characters from the input */
@@ -1663,7 +1660,7 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
             //----------INLINE Version of FFGET_getchar()
             //
             do {
-                if ((c == '\n')||(c == '\r')) lastchar_was_linebreak = 1; else lastchar_was_linebreak = 0;
+                // lastchar_was_linebreak = ((c == '\n')||(c == '\r'));
                 if (f->ungetcset)
                 {
                     f->ungetcset = 0;
@@ -1690,7 +1687,7 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
             //
             //-------END OF INLINE---------------------------------------------
             if ((ignore_crcount == 1)&&(c == '-'))
-                //&&(lastchar_was_linebreak == 1))
+                //&&(lastchar_was_linebreak))
             {
                 int hit = 0;
                 char *p;
@@ -1763,11 +1760,10 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
             /* if we get an EOF char, then we know something went wrong */
             if ( c == EOF )
             {
-                size_t bc;
                 if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_decode_64:DEBUG: input stream broken for base64 decoding for file %s. %ld bytes of data in buffer to be written out\n",FL,hinfo->filename,wbcount);
                 status = MIME_ERROR_B64_INPUT_STREAM_EOF;
                 //fwrite(writebuffer, 1, wbcount, of);
-                bc = write( of, writebuffer, wbcount);
+                write( of, writebuffer, wbcount);
                 close(of);
                 if (writebuffer) free(writebuffer);
                 return status;
@@ -1834,8 +1830,7 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
             //  interrupt costs.
             if ( wbcount > _MIME_WRITE_BUFFER_LIMIT )
             {
-                size_t bc;
-                bc = write ( of, writebuffer, wbcount );
+                write ( of, writebuffer, wbcount );
                 //          fwrite(writebuffer, 1, wbcount, of);
                 wbpos = writebuffer;
                 wbcount = 0;
