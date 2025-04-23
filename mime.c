@@ -35,7 +35,6 @@
 #include <ctype.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
 #include <unistd.h>
 #include <time.h>
 #include <errno.h>
@@ -126,11 +125,7 @@ static unsigned char b64[256]={
         128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128 \
 };
 
-
-
-
 struct MIME_globals {
-
     int header_defect_count;
     int filecount;
     char blankfileprefix[_MIME_STRLEN_MAX];
@@ -185,10 +180,7 @@ struct MIME_globals {
 };
 
 static struct MIME_globals glb;
-
-//char OK[]="OKAY";
 static char scratch[1024];
-
 /* File pointer for the headers output */
 FILE *headers;
 
@@ -245,7 +237,6 @@ Changes:
 int MIME_set_name_by_type( int level )
 {
     glb.name_by_type = level;
-
     return glb.name_by_type;
 }
 
@@ -1585,7 +1576,7 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
     long int bytecount=0; /* The total file decoded size */
     char output[3]; /* The 4->3 byte output array */
     char input[4]; /* The 4->3 byte input array */
-    char fullMIME_filename[_MIME_STRLEN_MAX]=""; /* Full Filename of output file */
+    char fullpath[_MIME_STRLEN_MAX]=""; /* Full Filename of output file */
 
     // Write Buffer routine
 
@@ -1605,12 +1596,12 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
 
     /* generate the MIME_filename, and open it up... */
     if (glb.unique_names) MIME_test_uniquename( unpack_metadata->dir, hinfo->filename, glb.rename_method );
-    snprintf(fullMIME_filename,_MIME_STRLEN_MAX,"%s/%s",unpack_metadata->dir,hinfo->filename);
-    result_f = fopen(fullMIME_filename,"wb");
+    snprintf(fullpath,_MIME_STRLEN_MAX,"%s/%s",unpack_metadata->dir,hinfo->filename);
+    result_f = fopen(fullpath,"wb");
     /* if we were unable to open the output file, then we better log an error and drop out */
     if (result_f < 0)
     {
-        LOGGER_log("%s:%d:MIME_decode_64:ERROR: Cannot open output file %s for BASE64 decoding. (%s)",FL,fullMIME_filename, strerror(errno));
+        LOGGER_log("%s:%d:MIME_decode_64:ERROR: Cannot open output file %s for BASE64 decoding. (%s)",FL,fullpath, strerror(errno));
         //      exit(_EXITERR_BASE64_OUTPUT_NOT_OPEN);
         return -1;
     }
@@ -1857,13 +1848,12 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
             /* if we didn't really write anything, then trash the  file */
             if (bytecount == 0)
             {
-                //              unlink(fullMIME_filename);
+                //              unlink(fullpath);
                 status = MIME_BASE64_STATUS_ZERO_FILE;
             }
             if (boundary_crash)
             {
                 // Absorb to end of line
-                //
                 status = MIME_BASE64_STATUS_HIT_BOUNDARY; // was _BOUNDARY_CRASH
             }
             if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_decode_64:DEBUG: File size = %ld bytes, Exit Status = %d, Boundary Crash = %d\n",FL, bytecount, status, boundary_crash);
@@ -1971,16 +1961,16 @@ size_t MIME_read_raw( char *src_mpname, char *dest_mpname, size_t rw_buffer_size
     size_t readcount, writecount;
     size_t fsize=-1;
     char *rw_buffer;
-    int fin;
+    FILE* input_f = NULL;
     FILE* result_f = NULL;
 
     rw_buffer = NULL;
 
     if (*src_mpname == '\0') {
-        fin = STDIN_FILENO;
+        input_f = STDIN_FILENO;
     } else {
-        fin = open(src_mpname, O_RDONLY);
-        if (fin == -1) {
+        input_f = fopen(src_mpname, "r");
+        if (input_f == NULL) {
             LOGGER_log("%s:%d:MIME_read_raw:ERROR: Cannot open '%s' for reading (%s)", FL, src_mpname, strerror(errno));
             return -1;
         }
@@ -2003,7 +1993,7 @@ size_t MIME_read_raw( char *src_mpname, char *dest_mpname, size_t rw_buffer_size
     fsize=0;
     /* while there is more data, consume it */
     do {
-        readcount = read( fin, rw_buffer, rw_buffer_size );
+        readcount = fread( rw_buffer, rw_buffer_size, 1, input_f );
         if (readcount > 0) {
             writecount = fwrite(rw_buffer, readcount, 1, result_f );
             if (writecount == -1) {
@@ -2019,7 +2009,7 @@ size_t MIME_read_raw( char *src_mpname, char *dest_mpname, size_t rw_buffer_size
     } while (readcount > 0);
 
     if ((*src_mpname != '\0')&&(readcount >= 0)) {
-        close(fin);
+        fclose(input_f);
     }
     if (readcount == -1) {
         LOGGER_log("%s:%d:MIME_read_raw:ERROR: read() '%s'",FL, strerror(errno));
