@@ -18,7 +18,7 @@ int UUENCODE_set_doubleCR_mode( int level );
 int UUENCODE_set_filename_report_fn( int (*ptr_to_fn)(char *, char *) );
 
 int UUENCODE_is_uuencode_header( char *line );
-int UUENCODE_is_file_uuencoded( char *fname );
+int UUENCODE_is_diskfile_uuencoded( char *fname );
 
 int UUENCODE_decode_uu( FFGET_FILE *f, char *unpackdir, char *input_filename, char *out_filename, int out_filename_size, int decode_whole_file, int keep );
 

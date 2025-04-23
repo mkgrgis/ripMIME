@@ -283,14 +283,28 @@ int UUENCODE_is_uuencode_header( char *line )
 		}
 	}
 
-
 	return result;
 }
 
+int UUENCODE_is_file_uuencoded( FILE *f )
+{
+	int result = 0;
+	int linecount = 0;
+	int limit=20;
+	char line[ UUENCODE_STRLEN_MAX ];
 
-
-
-
+	while ((linecount < limit)&&(fgets(line, sizeof(line), f)))
+	{
+		if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_is_file_uuencoded:DEBUG: Testing line '%s'\n", FL, line);
+		if (UUENCODE_is_uuencode_header( line ))
+		{
+			result = 1;
+			break;
+		}
+		linecount++;
+	}
+	return result;
+}
 
 /*------------------------------------------------------------------------
 Procedure:     UUENCODE_is_file_uuenc ID:1
@@ -304,35 +318,21 @@ Output:        0 = not uuencoded
 1 = _probably_ uuencoded.
 Errors:
 ------------------------------------------------------------------------*/
-int UUENCODE_is_file_uuencoded( char *fname )
+int UUENCODE_is_diskfile_uuencoded( char *fname )
 {
 	int result = 0;
-	int linecount = 0;
-	int limit=20;
-	char line[ UUENCODE_STRLEN_MAX ];
 	FILE *f;
 
 	f = fopen(fname,"r");
 	if (!f)
 	{
-		LOGGER_log("%s:%d:UUENCODE_is_file_uuencoded:ERROR: cannot open file '%s' for reading (%s)", FL, fname,strerror(errno));
+		LOGGER_log("%s:%d:UUENCODE_is_diskfile_uuencoded:ERROR: cannot open file '%s' for reading (%s)", FL, fname,strerror(errno));
 		uuencode_error = UUENCODE_STATUS_CANNOT_OPEN_FILE;
 		return -1;
 	}
 
-	while ((linecount < limit)&&(fgets(line, sizeof(line), f)))
-	{
-		if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_is_file_uuencoded:DEBUG: Testing line '%s'\n", FL, line);
-		if (UUENCODE_is_uuencode_header( line ))
-		{
-			result = 1;
-			break;
-		}
-		linecount++;
-	}
-
+	result = UUENCODE_is_file_uuencoded(f);
 	fclose(f);
-
 	return result;
 }
 
@@ -441,18 +441,10 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *unpackdir, char *input_filename, ch
 	while (!FFGET_feof(finf))
 	{
 		filename_found = 0;
-
-
 		// First lets locate the BEGIN line of this UUDECODE file
-
-		//		if (output_filename_supplied == 0)
-
-		if (1) /** 20041105-23H00:PLD: Stepan Kasal - UUbegin patch **/
 		{
-
 			while (FFGET_fgets(buf, sizeof(buf), finf))
 			{
-
 				if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: BUFFER: \n%s\n", FL, buf);
 
 				// Check for the presence of 'BEGIN', but make sure it's not followed by a 
@@ -494,7 +486,6 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *unpackdir, char *input_filename, ch
 					filename_found = 1;
 					break;
 				} // If line starts with BEGIN
-
 			} // While more lines in the INPUT file.
 
 		}
@@ -508,9 +499,6 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *unpackdir, char *input_filename, ch
 			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Output filename set to '%s'",FL, bp);
 		}
 
-
-
-
 		// If we have a filename, and we have our bp as NON-null, then we shall commence
 		//	to decode the UUencoded data from the stream.
 
@@ -523,7 +511,6 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *unpackdir, char *input_filename, ch
 
 			// If our filename wasn't supplied via the params, then copy it over here
 			if (output_filename_supplied == 0) snprintf( out_filename, out_filename_size, "%s", bp );
-
 
 			// Create the new output full path
 
@@ -550,7 +537,6 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *unpackdir, char *input_filename, ch
 
 			while (outf)
 			{
-
 				// for each input line
 				FFGET_fgets(buf, sizeof(buf), finf);
 				if (UUENCODE_DPEDANTIC) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Read line:\n%s",FL,buf);
@@ -576,9 +562,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *unpackdir, char *input_filename, ch
 				}
 
 				// The first char of the line indicates how many bytes are to be expected
-
 				n = uudec[(int)*buf];
-
 
 				// If the line is a -blank- then break out.
 
@@ -649,9 +633,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *unpackdir, char *input_filename, ch
 				if (bc != wbcount) {
 					LOGGER_log("%s:%d:ERROR: Attempted to write %ld bytes, only wrote %ld\n", FL, wbcount, bc);
 				}
-
 			}
-
 
 			if (outfo) fclose(outf);
 			// Call our reporting function, else, if no function is defined, use the default
@@ -668,7 +650,6 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *unpackdir, char *input_filename, ch
 			}
 
 			filecount++;
-
 		} // If valid filename was found for UUdecode
 
 		else
@@ -682,13 +663,8 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *unpackdir, char *input_filename, ch
 		// If this file was a result of the x-uuencode content encoding, then we need to exit out
 		// as we're reading in the -stream-, and we dont want to carry on reading because we'll
 		// end up just absorbing email data which we weren't supposed to.
-
 		if ((f)&&( !decode_whole_file )) break;
-
-
 	} // While !feof(inf)
-
-
 
 	if (writebuffer) free(writebuffer);
 
@@ -696,12 +672,6 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *unpackdir, char *input_filename, ch
 
 	if (inf) fclose(inf);
 
-
 	return filecount;
 }
-
-
-
-
-
 
