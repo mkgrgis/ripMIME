@@ -1026,36 +1026,25 @@ int MIME_test_uniquename( char *path, char *fname, int method )
         }
         else
         {
-            if (method == _MIME_RENAME_METHOD_PREFIX)
-            {
-                snprintf(newname,_MIME_STRLEN_MAX,"%s/%d_%s",path,count,fname);
+             switch (method) {
+                 case _MIME_RENAME_METHOD_PREFIX:
+                     snprintf(newname,_MIME_STRLEN_MAX,"%s/%d_%s",path,count,fname);
+                     break;
+                 case _MIME_RENAME_METHOD_INFIX:
+                     snprintf(newname,_MIME_STRLEN_MAX,"%s/%s_%d.%s",path,frontname,count,extention);
+                     break;
+                 case _MIME_RENAME_METHOD_POSTFIX:
+                     snprintf(newname,_MIME_STRLEN_MAX,"%s/%s_%d",path,fname,count);
+                     break;
+                 case _MIME_RENAME_METHOD_RANDPREFIX:
+                     snprintf(newname,_MIME_STRLEN_MAX,"%s/%d_%d_%s",path,count,randval,fname);
+                     break;
+                 case _MIME_RENAME_METHOD_RANDINFIX:
+                     snprintf(newname,_MIME_STRLEN_MAX,"%s/%s_%d_%d.%s",path,frontname,count,randval,extention);
+                     break;
+                 case _MIME_RENAME_METHOD_RANDPOSTFIX:
+                     snprintf(newname,_MIME_STRLEN_MAX,"%s/%s_%d_%d",path,fname,count,randval);
             }
-            else
-                if (method == _MIME_RENAME_METHOD_INFIX)
-                {
-                    snprintf(newname,_MIME_STRLEN_MAX,"%s/%s_%d.%s",path,frontname,count,extention);
-                }
-                else
-                    if (method == _MIME_RENAME_METHOD_POSTFIX)
-                    {
-                        snprintf(newname,_MIME_STRLEN_MAX,"%s/%s_%d",path,fname,count);
-                    }
-                    else
-                        /* Handle randome methots*/
-                        if (method == _MIME_RENAME_METHOD_RANDPREFIX)
-                        {
-                            snprintf(newname,_MIME_STRLEN_MAX,"%s/%d_%d_%s",path,count,randval,fname);
-                        }
-                        else
-                            if (method == _MIME_RENAME_METHOD_RANDINFIX)
-                            {
-                                snprintf(newname,_MIME_STRLEN_MAX,"%s/%s_%d_%d.%s",path,frontname,count,randval,extention);
-                            }
-                            else
-                                if (method == _MIME_RENAME_METHOD_RANDPOSTFIX)
-                                {
-                                    snprintf(newname,_MIME_STRLEN_MAX,"%s/%s_%d_%d",path,fname,count,randval);
-                                }
             count++;
         }
     }
