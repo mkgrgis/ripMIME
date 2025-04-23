@@ -1962,7 +1962,7 @@ int MIME_doubleCR_decode( char *filename, RIPMIME_output *unpack_metadata, struc
         if (MIME_VERBOSE) LOGGER_log("Attempting to decode Double-CR delimeted MIME attachment '%s'\n",filename);
         result = MIME_unpack( unpack_metadata, filename, current_recursion_level ); // 20040305-1303:PLD - Capture the result of the unpack and propagate up
     }
-    else if (UUENCODE_is_file_uuencoded(h.filename))
+    else if (UUENCODE_is_diskfile_uuencoded(h.filename))
     {
         if (MIME_VERBOSE) LOGGER_log("Attempting to decode UUENCODED attachment from Double-CR delimeted attachment '%s'\n",filename);
         UUENCODE_set_doubleCR_mode(1);
