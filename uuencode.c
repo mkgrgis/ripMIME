@@ -22,8 +22,6 @@ The biggest issue is that the interfaces to the decoding functions are too speci
 
 #include "uuencode.h"
 
-
-
 #ifndef FL
 #define FL __FILE__,__LINE__
 #endif
@@ -41,9 +39,8 @@ The biggest issue is that the interfaces to the decoding functions are too speci
 #define UUENCODE_WRITE_BUFFER_SIZE 4096
 #define UUENCODE_WRITE_BUFFER_LIMIT 4000
 
-
 static unsigned char uudec[256]={
-	32,   33,   34,   35,   36,   37,   38,   39,   40,   41,   42,   43,   44,   45,   46,   47,\
+		32,   33,   34,   35,   36,   37,   38,   39,   40,   41,   42,   43,   44,   45,   46,   47,\
 		48,   49,   50,   51,   52,   53,   54,   55,   56,   57,   58,   59,   60,   61,   62,   63,\
 		0,    1,    2,    3,    4,    5,    6,    7,    8,    9,   10,   11,   12,   13,   14,   15,\
 		16,   17,   18,   19,   20,   21,   22,   23,   24,   25,   26,   27,   28,   29,   30,   31,\
@@ -336,7 +333,6 @@ int UUENCODE_is_diskfile_uuencoded( char *fname )
 	return result;
 }
 
-
 /*-----------------------------------------------------------------\
   Function Name	: UUENCODE_decode_uu
   Returns Type	: int
@@ -394,7 +390,6 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *unpackdir, char *input_filename, ch
 
 
 	// If no FFGET_FILE param is passed to us directly, then we must create out own.
-
 	if (!f)
 	{
 		if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: NULL FFGET source stream given to us, create our own.\n",FL);
@@ -434,9 +429,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *unpackdir, char *input_filename, ch
 		wbcount = 0;
 	}
 
-
 	if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Beginning.(%s)\n",FL,fullpath);
-
 
 	while (!FFGET_feof(finf))
 	{
