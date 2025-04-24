@@ -338,12 +338,13 @@ int UUENCODE_is_diskfile_uuencoded( char *fname )
   Returns Type	: int
   ----Parameter List
   1. FFGET_FILE *f,				Source Data Stream
-  2.  char *unpackdir,			Directory to prefix to our write output
-  3.  char *input_filename,	The fully pathed input filename, containing UU data
-  4.  char *out_filename,		Pointer to a buffer where we will write the filename of the UU data
-  5.  int out_filename_size, out_filename buffers size
-  6.  int decode_whole_file, 0 == only first segment, >0 == all
-  7.  int keep ,					Keep the files we create, don't delete
+  2.  char *input_filename,	The fully pathed input filename, containing UU data
+  3.  char *out_filename,		Pointer to a buffer where we will write the filename of the UU data
+  4.  int out_filename_size, out_filename buffers size
+  5.  int decode_whole_file, 0 == only first segment, >0 == all
+  6.  int keep ,					Keep the files we create, don't delete
+  7.  unpack file metadata
+  8.  related MIME headers
   ------------------
   Exit Codes	:		Returns the number of attachments decoded in the data
   Side Effects	:
@@ -354,7 +355,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int UUENCODE_decode_uu( FFGET_FILE *f, char *unpackdir, char *input_filename, char *out_filename, int out_filename_size, int decode_whole_file, int keep, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo )
+int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename, int out_filename_size, int decode_whole_file, int keep, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo )
 {
 	int filename_found = 0;
 	char buf[ UUENCODE_STRLEN_MAX ];
@@ -507,7 +508,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *unpackdir, char *input_filename, ch
 
 			// Create the new output full path
 
-			snprintf(fullpath, sizeof(fullpath), "%s/%s", unpackdir, bp );
+			snprintf(fullpath, sizeof(fullpath), "%s/%s", unpack_metadata->dir, bp );
 			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Filename = (%s)\n", FL, fullpath);
 
 			outf = fopen(fullpath, "wb");
