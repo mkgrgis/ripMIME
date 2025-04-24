@@ -57,7 +57,7 @@
 #include "logger.h"
 #include "strstack.h"
 
-#include "MIME_headers.h"
+#include "mime_headers.h"
 
 int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int current_recursion_level, struct SS_object *ss );
 int MIME_unpack_single( RIPMIME_output *unpack_metadata, char *mpname, int current_recursion_level, struct SS_object *ss );
@@ -333,28 +333,6 @@ int MIME_set_recursion_level( int level )
     return glb.max_recursion_level;
 }
 
-/*-----------------------------------------------------------------\
-  Function Name : MIME_set_decode_tnef
-  Returns Type  : int
-  ----Parameter List
-  1. int level ,
-  ------------------
-  Exit Codes    :
-  Side Effects  :
-  --------------------------------------------------------------------
-Comments:
-
---------------------------------------------------------------------
-Changes:
-
-\------------------------------------------------------------------*/
-int MIME_set_decode_tnef( int level )
-{
-    glb.decode_tnef = level;
-    TNEF_set_decode( level );
-
-    return level;
-}
 /*-----------------------------------------------------------------\
   Function Name : MIME_set_decode_ole
   Returns Type  : int

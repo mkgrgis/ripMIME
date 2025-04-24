@@ -35,7 +35,7 @@
 #include "strstack.h"
 #include "boundary-stack.h"
 #include "filename-filters.h"
-#include "MIME_headers.h"
+#include "mime_headers.h"
 
 #ifndef FL
 #define FL __FILE__, __LINE__

@@ -25,7 +25,7 @@
 #include "ffget.h"
 #include "mime.h"
 #include "strstack.h"
-#include "MIME_headers.h"
+#include "mime_headers.h"
 
 #define RIPMIME_ERROR_CANT_CREATE_OUTPUT_DIR 1
 #define RIPMIME_ERROR_CANT_OPEN_INPUT_FILE 2
@@ -54,7 +54,7 @@ char help[] = "ripMIME -i <mime file> -d <directory>"
    "[-p prefix] [-e [header file]] [-vVh] [--version]"
    "[--no_nameless] [--unique_names [--prefix|--postfix|--infix|--randprefix|--randpostfix|--randinfix]]"
    "[--paranoid] [--mailbox] [--formdata] [--debug]"
-   "[--no-tnef] [--no-quotedprintable] [--no-uudecode]\n"
+   "[--no-quotedprintable] [--no-uudecode]\n"
    "Options available :\n"
    "-i : Input MIME encoded file (use '-' to input from STDIN)\n"
    "\tIf <mime file> is a directory, it will be recursed\n"
@@ -90,7 +90,6 @@ char help[] = "ripMIME -i <mime file> -d <directory>"
    "--mailbox : Process mailbox file\n"
    "--formdata : Process as form data (from HTML form etc).  Inhibits conversion of NUL/zero-bytes to spaces\n"
    "\n"
-   "--no-tnef : Turn off TNEF/winmail.dat decoding\n"
    "--no-ole : Turn off OLE decoding\n"
    "--no-uudecode : Turns off the facility of detecting UUencoded attachments in emails\n"
    "--no-quotedprintable : Turns off the facility of decoding QuotedPrintable data\n"
@@ -408,10 +407,6 @@ int RIPMIME_parse_parameters (struct RIPMIME_globals *glb, int argc, char **argv
                        else if (strncmp (&(argv[i][2]), "no-uudecode", 11) == 0)
                        {
                            MIME_set_decode_uudecode(0);
-                       }
-                       else if (strncmp (&(argv[i][2]), "no-tnef", 7) == 0)
-                       {
-                           MIME_set_decode_tnef (0);
                        }
                        else if (strncmp (&(argv[i][2]), "no-ole", 6) == 0)
                        {
