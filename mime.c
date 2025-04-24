@@ -1293,6 +1293,17 @@ MIME_element* MIME_element_add (RIPMIME_output *unpack_metadata, struct MIMEH_he
     return cur;
 }
 
+void MIME_element_remove (MIME_element* cur)
+{
+    if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_element_remove:start\n",FL);
+
+    if (cur->f != NULL) {
+        fclose(cur->f);
+    }
+    free(cur->fullpath);
+    free(cur);
+}
+
 /*------------------------------------------------------------------------
 Procedure:     MIME_decode_raw ID:1
 Purpose:       Decodes a binary type attachment, ie, no encoding, just raw data.
@@ -1346,7 +1357,7 @@ int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIME
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_decode_raw:DEBUG: Completed reading RAW data\n",FL);
     free(buffer);
-    fclose(cur_mime->f);
+    MIME_element_remove(cur_mime);
     if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_decode_raw:DEBUG: Closed file and free'd buffer\n",FL);
     // If there was UUEncoded portions [potentially] in the email, the
     // try to extract them using the MIME_decode_uu()
@@ -1470,11 +1481,8 @@ int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIM
             if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_DNORMAL:DEBUG: End processing line.",FL);
         } // while
         if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_decode_text:DEBUG: Done writing output file '%s'...now attempting to close.",FL, cur_mime->fullpath);
-        // if the file is still safely open
-        if (cur_mime->f)
-        {
-            fclose(cur_mime->f);
-        } // if file still safely open
+
+        MIME_element_remove(cur_mime);
 
         if (linecount == 0)
         {
@@ -1744,7 +1752,7 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
                 if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_decode_64:DEBUG: input stream broken for base64 decoding for file %s. %ld bytes of data in buffer to be written out\n",FL,hinfo->filename,wbcount);
                 status = MIME_ERROR_B64_INPUT_STREAM_EOF;
                 fwrite(writebuffer, 1, wbcount, cur_mime->f);
-                fclose(cur_mime->f);
+                MIME_element_remove(cur_mime);
                 if (writebuffer) free(writebuffer);
                 return status;
                 break;
@@ -1836,7 +1844,7 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
                 fwrite(writebuffer, 1, wbcount, cur_mime->f);
             }
             /* close the output file, we're done writing to it */
-            fclose(cur_mime->f);
+            MIME_element_remove(cur_mime);
             /* if we didn't really write anything, then trash the  file */
             if (bytecount == 0)
             {
