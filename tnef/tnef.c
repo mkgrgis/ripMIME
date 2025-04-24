@@ -70,7 +70,6 @@ struct TNEF_globals {
 	int debug;
 
 	int TNEF_Verbose;
-	int savedata;
 
 	uint8 *tnef_home;
 	uint8 *tnef_limit;
@@ -80,13 +79,6 @@ struct TNEF_globals {
 };
 
 static struct TNEF_globals TNEF_glb;
-
-// The variables below have been pushed into the TNEF globals
-//int Verbose = FALSE;
-//int SaveData = FALSE;
-//uint8 *tnef_home;
-//uint8 *tnef_limit;
-
 
 /*-----------------------------------------------------------------\
   Function Name	: TNEF_init
@@ -109,31 +101,8 @@ void TNEF_init( void )
 	TNEF_glb.verbose = 0;
 	TNEF_glb.verbosity_contenttype = 0;
 	TNEF_glb.debug = 0;
-	TNEF_glb.savedata = 1;
 	TNEF_glb.TNEF_Verbose = 0;
 	TNEF_glb.filename_decoded_report = NULL;
-}
-
-/*-----------------------------------------------------------------\
-  Function Name	: TNEF_set_decode
-  Returns Type	: int
-  ----Parameter List
-  1. int level , 
-  ------------------
-  Exit Codes	: 
-  Side Effects	: 
-  --------------------------------------------------------------------
-Comments:
-
---------------------------------------------------------------------
-Changes:
-
-\------------------------------------------------------------------*/
-int TNEF_set_decode( int level )
-{
-	TNEF_glb.savedata = level;
-
-	return TNEF_glb.savedata;
 }
 
 /*------------------------------------------------------------------------
@@ -553,7 +522,7 @@ int read_attribute(uint8 *tsp, char *file_dir)
 			attach_size=size;
 			//		attach_loc =(int)tsp+header; // 2003-02-22-1232-PLD
 			attach_loc =(uint8 *)tsp+header;
-			if (TNEF_glb.savedata && strlen(attach_title)>0 && attach_size > 0) {
+			if (strlen(attach_title)>0 && attach_size > 0) {
 				if (!save_attach_data(attach_title, (uint8 *)attach_loc,attach_size,file_dir))
 				{
 					if (TNEF_VERBOSE) {
@@ -574,7 +543,7 @@ int read_attribute(uint8 *tsp, char *file_dir)
 			break;
 		case attAttachTitle:
 			strncpy(attach_title, make_string(tsp+header,size),255);
-			if (TNEF_glb.savedata && strlen(attach_title)>0 && attach_size > 0) {
+			if (strlen(attach_title)>0 && attach_size > 0) {
 				if (!save_attach_data(attach_title, (uint8 *)attach_loc,attach_size, file_dir))
 				{
 					if (TNEF_VERBOSE) {
@@ -747,13 +716,6 @@ int TNEF_main( char *filename, char *file_dir )
 	int size, nread;
 
 	if (TNEF_DEBUG) LOGGER_log("%s:%d:TNEF_main:DEBUG: Start, decoding %s\n",FL, filename);
-
-	if (TNEF_glb.savedata == 0 )
-	{
-		if (TNEF_DEBUG) LOGGER_log("%s:%d:TNEF_name:DEBUG: decode_tnef is set to 0, not decoding file.",FL);
-		return 0;
-	}
-
 
 	// Test to see if the file actually exists
 	//
