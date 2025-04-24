@@ -1281,8 +1281,8 @@ MIME_element* MIME_element_add (RIPMIME_output *unpack_metadata, struct MIMEH_he
 
     cur->f = fopen(cur->fullpath,"wb");
     if (cur->f == NULL) {
-        /** If we were unable to open the output file, report the error and return -1 **/
-        LOGGER_log("%s:%d:MIME_decode_text:ERROR: cannot open %s for writing",FL,cur->fullpath);
+        LOGGER_log("%s:%d:MIME_element_add:ERROR: cannot open %s for writing",FL,cur->fullpath);
+        return cur;
     }
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_element_add:DEBUG: Decoding [encoding=%d] to %s\n",FL, hinfo->content_transfer_encoding, cur->fullpath);
