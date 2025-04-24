@@ -126,8 +126,8 @@ int MIME_is_file_uuenc( char *fname );
 char *MIME_get_blankfileprefix( void );
 char *MIME_get_headersname( void );
 char *MIME_get_subject( void );
-int MIME_init( void );
-int MIME_close( void );
+void MIME_init( void );
+void MIME_close( void );
 int MIME_set_tmpdir( char *tmpdir );
 //int MIME_postdecode_cleanup( RIPMIME_output *unpack_metadata, struct SS_object *ss );
 

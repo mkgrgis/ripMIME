@@ -107,7 +107,7 @@ int MIME_handle_rfc822( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
 
 /* our base 64 decoder table */
 static unsigned char b64[256]={
-    128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,\
+        128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,\
         128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,\
         128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,   62,  128,  128,  128,   63,\
         52,   53,   54,   55,   56,   57,   58,   59,   60,   61,  128,  128,  128,    0,  128,  128,\
@@ -124,6 +124,14 @@ static unsigned char b64[256]={
         128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,\
         128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128 \
 };
+
+typedef struct {
+    struct MIMEH_header_info *hinfo;
+    int id;
+    char* fullpath;
+    FILE* f;
+    int result;
+} MIME_element;
 
 struct MIME_globals {
     int header_defect_count;
@@ -177,12 +185,11 @@ struct MIME_globals {
     char subject[_MIME_STRLEN_MAX];
 
     int mime_count;
+    MIME_element *mime_arr;
 };
 
 static struct MIME_globals glb;
 static char scratch[1024];
-/* File pointer for the headers output */
-FILE *headers;
 
 /*-----------------------------------------------------------------\
   Function Name : MIME_version
@@ -1260,6 +1267,32 @@ int MIME_decode_OLE( RIPMIME_output *unpack_metadata, struct MIMEH_header_info *
 }
 #endif
 
+MIME_element* MIME_element_add (RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo)
+{
+    MIME_element * cur = malloc(sizeof(MIME_element));
+    int fullpath_len = strlen(unpack_metadata->dir) + strlen(hinfo->filename) + 3 * sizeof(char);
+
+    if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_element_add:start\n",FL);
+
+    cur->hinfo = hinfo;
+    cur->id = glb.mime_count++;
+    cur->fullpath = (char*)malloc(fullpath_len);
+    snprintf(cur->fullpath,fullpath_len,"%s/%s",unpack_metadata->dir,hinfo->filename);
+
+    cur->f = fopen(cur->fullpath,"wb");
+    if (cur->f == NULL) {
+        /** If we were unable to open the output file, report the error and return -1 **/
+        LOGGER_log("%s:%d:MIME_decode_text:ERROR: cannot open %s for writing",FL,cur->fullpath);
+    }
+
+    if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_element_add:DEBUG: Decoding [encoding=%d] to %s\n",FL, hinfo->content_transfer_encoding, cur->fullpath);
+
+    if (unpack_metadata->unpack_mode == RIPMIME_UNPACK_MODE_LIST_FILES && cur->f != NULL) {
+        fprintf (stdout, "%d|%d|%d|%d|%s|%s\n", glb.mime_count, glb.attachment_count, glb.filecount, hinfo->current_recursion_level, hinfo->content_type_string, hinfo->filename);
+    }
+    return cur;
+}
+
 /*------------------------------------------------------------------------
 Procedure:     MIME_decode_raw ID:1
 Purpose:       Decodes a binary type attachment, ie, no encoding, just raw data.
@@ -1270,13 +1303,12 @@ Errors:
 int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int keep )
 {
     int result = 0;
-    char fullpath[1024];
     int bufsize=1024;
     char *buffer = malloc((bufsize +1)*sizeof(char));
     size_t readcount;
     int file_has_uuencode = 0;
     int decode_entire_file = 0;
-    FILE* result_f = NULL;
+    MIME_element* cur_mime = NULL;
 
     /* Decoding / reading a binary attachment is a real interesting situation, as we
      * still use the fgets() call, but we do so repeatedly until it returns a line with a
@@ -1287,20 +1319,7 @@ int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIME
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_decode_raw:DEBUG: Start\n",FL);
 
-    glb.mime_count++;
-    if (unpack_metadata->unpack_mode == RIPMIME_UNPACK_MODE_LIST_FILES)
-    {
-        MIME_fprintf_decoded(unpack_metadata, hinfo);
-    }
-
-    snprintf(fullpath,sizeof(fullpath),"%s/%s",unpack_metadata->dir,hinfo->filename);
-    result_f = fopen(fullpath, "w");
-
-    if (result_f == NULL)
-    {
-        LOGGER_log("%s:%d:MIME_decode_raw:ERROR: cannot open file %s for writing. (%s)\n\n",FL,fullpath,strerror(errno));
-        return -1;
-    }
+    cur_mime = MIME_element_add (unpack_metadata, hinfo);
 
     while ((readcount=FFGET_raw(f, (unsigned char *) buffer,bufsize)) > 0)
     {
@@ -1321,13 +1340,13 @@ int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIME
             break;
         } else {
             if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_decode_raw:DEBUG: writing: %s\n",FL, buffer);
-            fwrite( buffer, readcount, 1, result_f);
+            fwrite( buffer, readcount, 1, cur_mime->f);
         }
     }
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_decode_raw:DEBUG: Completed reading RAW data\n",FL);
     free(buffer);
-    fclose(result_f);
+    fclose(cur_mime->f);
     if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_decode_raw:DEBUG: Closed file and free'd buffer\n",FL);
     // If there was UUEncoded portions [potentially] in the email, the
     // try to extract them using the MIME_decode_uu()
@@ -1389,24 +1408,18 @@ Errors:
 ------------------------------------------------------------------------*/
 int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int keep )
 {
-    FILE *result_f;                           // output file
     int linecount = 0;                  // The number of lines
     int file_has_uuencode = 0;          // Flag to indicate this text has UUENCODE in it
-    char fullpath[1024]="";         // Filename of the output file
     char line[1024];                    // The input lines from the file we're decoding
     char *get_result = &line[0];
     int lastlinewasboundary = 0;
     int result = 0;
     int decodesize=0;
+    MIME_element* cur_mime = NULL;
 
-    glb.mime_count++;
-    if (unpack_metadata->unpack_mode == RIPMIME_UNPACK_MODE_LIST_FILES)
-    {
-        MIME_fprintf_decoded(unpack_metadata, hinfo);
-    }
+    if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_decode_text:DEBUG: Decoding TEXT [encoding=%d] to %s\n",FL, hinfo->content_transfer_encoding, hinfo->filename);
 
-    snprintf(fullpath,sizeof(fullpath),"%s/%s",unpack_metadata->dir,hinfo->filename);
-    if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_decode_text:DEBUG: Decoding TEXT [encoding=%d] to %s\n",FL, hinfo->content_transfer_encoding, fullpath);
+    cur_mime = MIME_element_add (unpack_metadata, hinfo);
 
     if (!f)
     {
@@ -1416,15 +1429,7 @@ int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIM
     }
     if (f)
     {
-        /** If we were able to open the input file, try opening the output file and process the data **/
-        result_f = fopen(fullpath,"w");
-        if (!result_f)
-        {
-            /** If we were unable to open the output file, report the error and return -1 **/
-            LOGGER_log("%s:%d:MIME_decode_text:ERROR: cannot open %s for writing",FL,fullpath);
-            return _EXITERR_MIMEREAD_CANNOT_WRITE_OUTPUT;
-        }
-        while ((get_result = FFGET_fgets(line,1023,f))&&(result_f))
+        while ((get_result = FFGET_fgets(line,1023,f))&&(cur_mime->f))
         {
             int line_len = strlen(line);
             linecount++;
@@ -1449,10 +1454,10 @@ int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIM
                 {
                     if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_DNORMAL:DEBUG: Hit a boundary on the line",FL);
                     decodesize = MDECODE_decode_qp_text(line);
-                    fwrite(line, 1, decodesize, result_f);
+                    fwrite(line, 1, decodesize, cur_mime->f);
 
                 } else {
-                    fprintf(result_f,"%s",line);
+                    fprintf(cur_mime->f,"%s",line);
                 }
 
                 if ((!file_has_uuencode)&&( UUENCODE_is_uuencode_header( line )))
@@ -1464,11 +1469,11 @@ int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIM
             //  linecount++;
             if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_DNORMAL:DEBUG: End processing line.",FL);
         } // while
-        if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_decode_text:DEBUG: Done writing output file '%s'...now attempting to close.",FL, fullpath);
+        if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_decode_text:DEBUG: Done writing output file '%s'...now attempting to close.",FL, cur_mime->fullpath);
         // if the file is still safely open
-        if (result_f)
+        if (cur_mime->f)
         {
-            fclose(result_f);
+            fclose(cur_mime->f);
         } // if file still safely open
 
         if (linecount == 0)
@@ -1576,7 +1581,6 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
     long int bytecount=0; /* The total file decoded size */
     char output[3]; /* The 4->3 byte output array */
     char input[4]; /* The 4->3 byte input array */
-    char fullpath[_MIME_STRLEN_MAX]=""; /* Full Filename of output file */
 
     // Write Buffer routine
 
@@ -1584,25 +1588,13 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
     unsigned char *wbpos;
     int wbcount = 0;
     int loop;
-    FILE * result_f = NULL;
+    MIME_element* cur_mime = NULL;
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_decode_64:DEBUG: attempting to decode '%s'", FL, hinfo->filename);
 
-    glb.mime_count++;
-    if (unpack_metadata->unpack_mode == RIPMIME_UNPACK_MODE_LIST_FILES)
+    cur_mime = MIME_element_add (unpack_metadata, hinfo);
+    if (cur_mime->f == NULL)
     {
-        MIME_fprintf_decoded(unpack_metadata, hinfo);
-    }
-
-    /* generate the MIME_filename, and open it up... */
-    if (glb.unique_names) MIME_test_uniquename( unpack_metadata->dir, hinfo->filename, glb.rename_method );
-    snprintf(fullpath,_MIME_STRLEN_MAX,"%s/%s",unpack_metadata->dir,hinfo->filename);
-    result_f = fopen(fullpath,"wb");
-    /* if we were unable to open the output file, then we better log an error and drop out */
-    if (result_f < 0)
-    {
-        LOGGER_log("%s:%d:MIME_decode_64:ERROR: Cannot open output file %s for BASE64 decoding. (%s)",FL,fullpath, strerror(errno));
-        //      exit(_EXITERR_BASE64_OUTPUT_NOT_OPEN);
         return -1;
     }
 
@@ -1751,8 +1743,8 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
             {
                 if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_decode_64:DEBUG: input stream broken for base64 decoding for file %s. %ld bytes of data in buffer to be written out\n",FL,hinfo->filename,wbcount);
                 status = MIME_ERROR_B64_INPUT_STREAM_EOF;
-                fwrite(writebuffer, 1, wbcount, result_f);
-                fclose(result_f);
+                fwrite(writebuffer, 1, wbcount, cur_mime->f);
+                fclose(cur_mime->f);
                 if (writebuffer) free(writebuffer);
                 return status;
                 break;
@@ -1818,7 +1810,7 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
             //  interrupt costs.
             if ( wbcount > _MIME_WRITE_BUFFER_LIMIT )
             {
-                fwrite(writebuffer, 1, wbcount, result_f);
+                fwrite(writebuffer, 1, wbcount, cur_mime->f);
                 wbpos = writebuffer;
                 wbcount = 0;
             }
@@ -1841,10 +1833,10 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
             //  we'll end up with truncated files.
             if (wbcount > 0)
             {
-                fwrite(writebuffer, 1, wbcount, result_f);
+                fwrite(writebuffer, 1, wbcount, cur_mime->f);
             }
             /* close the output file, we're done writing to it */
-            fclose(result_f);
+            fclose(cur_mime->f);
             /* if we didn't really write anything, then trash the  file */
             if (bytecount == 0)
             {
@@ -2095,7 +2087,7 @@ Input:
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_init( void )
+void MIME_init( void )
 {
     BS_init();          // Boundary-stack initialisations
     MIMEH_init();       // Initialise MIME header routines.
@@ -2143,11 +2135,7 @@ int MIME_init( void )
     glb.subject[0]='\0';
 
     glb.mime_count = 0;
-
-    return 0;
 }
-
-
 
 /*-----------------------------------------------------------------\
   Function Name : MIME_generate_multiple_hardlink_filenames
@@ -3355,12 +3343,8 @@ int MIME_unpack( RIPMIME_output *unpack_metadata, char *mpname, int current_recu
  * MIME_close
  *
  * Closes the files used in MIME_unpack, such as headers etc */
-int MIME_close( void )
+void MIME_close( void )
 {
-    if (headers)
-    {
-        fclose(headers);
-    }
-    return 0;
+    if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_close: start.",FL);
 }
 /*----------END OF MIME.c------------*/

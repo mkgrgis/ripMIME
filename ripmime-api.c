@@ -43,7 +43,7 @@ char version[] = "v1.4.0.1 - 30/08/2004 (C) PLDaniels http://www.pldaniels.com/r
  Changes:
 
 \------------------------------------------------------------------*/
-int RIPMIME_init (struct RIPMIME_object *rm)
+void RIPMIME_init (struct RIPMIME_object *rm)
 {
     rm->outputdir = defaultdir;
     rm->mailpack = NULL;
@@ -54,9 +54,6 @@ int RIPMIME_init (struct RIPMIME_object *rm)
     MIME_set_paranoid(0);
     MIME_set_renamemethod(_MIME_RENAME_METHOD_INFIX);
     MIME_set_verbosity(0);
-
-
-    return 0;
 }
 
 
@@ -137,7 +134,6 @@ int RIPMIME_decode( struct RIPMIME_object *rm, char *mailpack, char *outputdir )
     MIME_close ();
 
     return 0;
-
 }
 
 /*-END-----------------------------------------------------------*/
