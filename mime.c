@@ -55,9 +55,6 @@
 #include "uuencode.h"
 #include "filename-filters.h"
 #include "logger.h"
-#include "strstack.h"
-
-#include "mime_headers.h"
 
 int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int current_recursion_level, struct SS_object *ss );
 int MIME_unpack_single( RIPMIME_output *unpack_metadata, char *mpname, int current_recursion_level, struct SS_object *ss );
@@ -124,14 +121,6 @@ static unsigned char b64[256]={
         128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,\
         128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128 \
 };
-
-typedef struct {
-    struct MIMEH_header_info *hinfo;
-    int id;
-    char* fullpath;
-    FILE* f;
-    int result;
-} MIME_element;
 
 typedef struct {
     size_t size;

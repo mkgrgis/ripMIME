@@ -129,8 +129,18 @@ char *MIME_get_subject( void );
 void MIME_init( void );
 void MIME_close( void );
 int MIME_set_tmpdir( char *tmpdir );
-//int MIME_postdecode_cleanup( RIPMIME_output *unpack_metadata, struct SS_object *ss );
 
-//int MIME_decode_TNEF( FILE *f, RIPMIME_output *unpack_metadata, struct _header_info *hinfo, int keep );
+#include "strstack.h"
+#include "mime_headers.h"
+
+typedef struct {
+    struct MIMEH_header_info *hinfo;
+    int id;
+    char* fullpath;
+    FILE* f;
+    int result;
+} MIME_element;
+
+MIME_element* MIME_element_add_with_path (char* fullpath, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo);
 
 #endif
