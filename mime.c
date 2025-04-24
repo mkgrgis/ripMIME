@@ -1221,19 +1221,14 @@ Errors:
 ------------------------------------------------------------------------*/
 int MIME_decode_TNEF( RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int keep )
 {
-    int result=0;
-    char fullpath[1024];
-
-    snprintf(fullpath,sizeof(fullpath),"%s/%s",unpack_metadata->dir,hinfo->filename);
-    TNEF_set_path(unpack_metadata->dir);
-    result = TNEF_main( fullpath );
+    int result = TNEF_main( hinfo->filename, unpack_metadata->dir );
 
     if (result >= 0)
     {
         //      result = remove( fullpath );
         if (result == -1)
         {
-            if (MIME_VERBOSE) LOGGER_log("%s:%d:MIME_decode_TNEF: Removing %s failed (%s)",FL,fullpath,strerror(errno));
+            if (MIME_VERBOSE) LOGGER_log("%s:%d:MIME_decode_TNEF: Removing %s/%s failed (%s)",FL,hinfo->filename, unpack_metadata->dir,strerror(errno));
         }
     }
     return result;
@@ -1288,18 +1283,15 @@ int MIME_decode_OLE( RIPMIME_output *unpack_metadata, struct MIMEH_header_info *
 }
 #endif
 
-MIME_element* MIME_element_add (RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo)
+MIME_element* MIME_element_add_with_path (char* fullpath, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo)
 {
     MIME_element *cur = malloc(sizeof(MIME_element));
-    int fullpath_len = strlen(unpack_metadata->dir) + strlen(hinfo->filename) + 3 * sizeof(char);
-
     if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_element_add:start\n",FL);
 
     insertItem(glb.mime_arr, cur);
     cur->hinfo = hinfo;
     cur->id = glb.mime_count++;
-    cur->fullpath = (char*)malloc(fullpath_len);
-    snprintf(cur->fullpath,fullpath_len,"%s/%s",unpack_metadata->dir,hinfo->filename);
+    cur->fullpath = fullpath;
 
     cur->f = fopen(cur->fullpath,"wb");
     if (cur->f == NULL) {
@@ -1309,10 +1301,19 @@ MIME_element* MIME_element_add (RIPMIME_output *unpack_metadata, struct MIMEH_he
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_element_add:DEBUG: Decoding [encoding=%d] to %s\n",FL, hinfo->content_transfer_encoding, cur->fullpath);
 
-    if (unpack_metadata->unpack_mode == RIPMIME_UNPACK_MODE_LIST_FILES && cur->f != NULL) {
+    if (unpack_metadata != NULL && unpack_metadata->unpack_mode == RIPMIME_UNPACK_MODE_LIST_FILES && cur->f != NULL) {
         fprintf (stdout, "%d|%d|%d|%d|%s|%s\n", glb.mime_count, glb.attachment_count, glb.filecount, hinfo->current_recursion_level, hinfo->content_type_string, hinfo->filename);
     }
     return cur;
+}
+
+MIME_element* MIME_element_add (RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo)
+{
+    int fullpath_len = strlen(unpack_metadata->dir) + strlen(hinfo->filename) + 3 * sizeof(char);
+    char *fullpath = (char*)malloc(fullpath_len);
+
+    snprintf(fullpath,fullpath_len,"%s/%s",unpack_metadata->dir,hinfo->filename);
+    return MIME_element_add_with_path(fullpath, unpack_metadata, hinfo);
 }
 
 void MIME_element_remove (MIME_element* cur)
@@ -3376,8 +3377,10 @@ int MIME_unpack( RIPMIME_output *unpack_metadata, char *mpname, int current_recu
  * Closes the files used in MIME_unpack, such as headers etc */
 void MIME_close( void )
 {
-    if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_close: start.",FL);
-    printArray(glb.mime_arr);
+    if (MIME_DNORMAL) {
+        LOGGER_log("%s:%d:MIME_close: start.",FL);
+        printArray(glb.mime_arr);
+    }
 
     freeArray(glb.mime_arr);
 }

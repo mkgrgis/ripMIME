@@ -29,6 +29,9 @@
  * 1.3 Version (7/22/97)
  *   Ok, take out the DTR over the stream, now uses read_16.
  *
+ * 1.5 Version (4/24/24)
+ *   Rewritten from file utility to part of ripMIME
+ *
  * NOTE: THIS SOFTWARE IS FOR YOUR PERSONAL GRATIFICATION ONLY.  I DON'T
  * IMPLY IN ANY LEGAL SENSE THAT THIS SOFTWARE DOES ANYTHING OR THAT IT WILL
  * BE USEFULL IN ANY WAY.  But, you can send me fixes to it, I don't mind.
@@ -60,14 +63,11 @@
 /** 20041207-1246:PLD: Added RT32 macro to allow for large numbers of read-tests **/
 #define RT32( num_addr, offset ) if (read_32(num_addr, offset)==-1) return -1
 
-#define TNEF_PATH_SIZE 1024
-
 struct TNEF_globals {
 	int file_num;
 	int verbose;
 	int verbosity_contenttype;
 	int debug;
-	char path[ TNEF_PATH_SIZE +1];
 
 	int TNEF_Verbose;
 	int savedata;
@@ -103,7 +103,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int TNEF_init( void )
+void TNEF_init( void )
 {
 	TNEF_glb.file_num = 0;
 	TNEF_glb.verbose = 0;
@@ -112,11 +112,7 @@ int TNEF_init( void )
 	TNEF_glb.savedata = 1;
 	TNEF_glb.TNEF_Verbose = 0;
 	TNEF_glb.filename_decoded_report = NULL;
-	TNEF_glb.path[0] = '\0';
-
-	return 0;
 }
-
 
 /*-----------------------------------------------------------------\
   Function Name	: TNEF_set_decode
@@ -139,22 +135,6 @@ int TNEF_set_decode( int level )
 
 	return TNEF_glb.savedata;
 }
-
-
-/*------------------------------------------------------------------------
-Procedure:     TNEF_set_path ID:1
-Purpose:
-Input:
-Output:
-Errors:
-------------------------------------------------------------------------*/
-int TNEF_set_path( char *path )
-{
-	snprintf( TNEF_glb.path, TNEF_PATH_SIZE , "%s", path);
-
-	return 0;
-}
-
 
 /*------------------------------------------------------------------------
 Procedure:     TNEF_set_verbosity ID:1
@@ -326,12 +306,12 @@ Input:
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int save_attach_data(char *title, uint8 *tsp, uint32 size)
+int save_attach_data(char *title, uint8 *tsp, uint32 size, char * file_dir)
 {
 	FILE *out;
 	char filename[1024];
 
-	snprintf(filename, sizeof(filename),"%s/%s", TNEF_glb.path, title );
+	snprintf(filename, sizeof(filename),"%s/%s", title );
 
 	out = fopen(filename, "w");
 	if (!out)
@@ -354,7 +334,7 @@ Input:
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int handle_props(uint8 *tsp)
+int handle_props(uint8 *tsp, char * file_dir)
 {
 	int bytes = 0;
 	uint32 num_props = 0;
@@ -384,7 +364,7 @@ int handle_props(uint8 *tsp)
 				{
 					sprintf (filename, "XAM_%d.rtf", TNEF_glb.file_num);
 					TNEF_glb.file_num++;
-					save_attach_data(filename, tsp+bytes, num);
+					save_attach_data(filename, tsp+bytes, num, file_dir);
 				}
 				/* num + PAD */
 				bytes += num + ((num % 4) ? (4 - num%4) : 0);
@@ -481,7 +461,7 @@ Input:
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int read_attribute(uint8 *tsp)
+int read_attribute(uint8 *tsp, char *file_dir)
 {
 
 	int bytes = 0, header = 0;
@@ -574,7 +554,7 @@ int read_attribute(uint8 *tsp)
 			//		attach_loc =(int)tsp+header; // 2003-02-22-1232-PLD
 			attach_loc =(uint8 *)tsp+header;
 			if (TNEF_glb.savedata && strlen(attach_title)>0 && attach_size > 0) {
-				if (!save_attach_data(attach_title, (uint8 *)attach_loc,attach_size))
+				if (!save_attach_data(attach_title, (uint8 *)attach_loc,attach_size,file_dir))
 				{
 					if (TNEF_VERBOSE) {
 						if (TNEF_glb.filename_decoded_report == NULL)
@@ -595,7 +575,7 @@ int read_attribute(uint8 *tsp)
 		case attAttachTitle:
 			strncpy(attach_title, make_string(tsp+header,size),255);
 			if (TNEF_glb.savedata && strlen(attach_title)>0 && attach_size > 0) {
-				if (!save_attach_data(attach_title, (uint8 *)attach_loc,attach_size))
+				if (!save_attach_data(attach_title, (uint8 *)attach_loc,attach_size, file_dir))
 				{
 					if (TNEF_VERBOSE) {
 						if (TNEF_glb.filename_decoded_report == NULL)
@@ -632,7 +612,7 @@ int read_attribute(uint8 *tsp)
 			default_handler(attribute, tsp+header, size);
 			break;
 		case attMAPIProps:
-			if (handle_props(tsp+header)==-1) return -1;
+			if (handle_props(tsp+header, file_dir)==-1) return -1;
 			break;
 		case attRecipTable:
 			default_handler(attribute, tsp+header, size);
@@ -689,7 +669,7 @@ Input:
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int TNEF_decode_tnef(uint8 *tnef_stream, int size)
+int TNEF_decode_tnef(uint8 *tnef_stream, int size, char* file_dir)
 {
 
 	int ra_response;
@@ -733,7 +713,7 @@ int TNEF_decode_tnef(uint8 *tnef_stream, int size)
 	while ((tsp - tnef_stream) < size)
 	{
 		if (TNEF_DEBUG) LOGGER_log("%s:%d:TNEF_decode_tnef:DEBUG: Offset = %d\n", FL,tsp -TNEF_glb.tnef_home);
-		ra_response = read_attribute(tsp);
+		ra_response = read_attribute(tsp, file_dir);
 		if ( ra_response > 0 )
 		{
 			tsp += ra_response;
@@ -752,11 +732,6 @@ int TNEF_decode_tnef(uint8 *tnef_stream, int size)
 	return 0;
 }
 
-
-
-
-
-
 /*------------------------------------------------------------------------
 Procedure:     TNEF_main ID:1
 Purpose:       Decodes a given TNEF encoded file
@@ -764,7 +739,7 @@ Input:
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int TNEF_main( char *filename )
+int TNEF_main( char *filename, char *file_dir )
 {
 	FILE *fp;
 	struct stat sb;
@@ -840,17 +815,13 @@ int TNEF_main( char *filename )
 
 	// Proceed to decode the file
 	//
-	TNEF_decode_tnef(tnef_stream,size);
+	TNEF_decode_tnef(tnef_stream,size, file_dir);
 
 	if (TNEF_glb.tnef_home) free(TNEF_glb.tnef_home);
-
 
 	if (TNEF_DEBUG) LOGGER_log("%s:%d:TNEF_main:DEBUG: finished decoding.\n",FL);
 
 	return 0;
 }
 
-
 //--------------------------END.
-
-
