@@ -340,11 +340,10 @@ int UUENCODE_is_diskfile_uuencoded( char *fname )
   1. FFGET_FILE *f,				Source Data Stream
   2.  char *input_filename,	The fully pathed input filename, containing UU data
   3.  char *out_filename,		Pointer to a buffer where we will write the filename of the UU data
-  4.  int out_filename_size, out_filename buffers size
-  5.  int decode_whole_file, 0 == only first segment, >0 == all
-  6.  int keep ,					Keep the files we create, don't delete
-  7.  unpack file metadata
-  8.  related MIME headers
+  4.  int decode_whole_file, 0 == only first segment, >0 == all
+  5.  int keep ,					Keep the files we create, don't delete
+  6.  unpack file metadata
+  7.  related MIME headers
   ------------------
   Exit Codes	:		Returns the number of attachments decoded in the data
   Side Effects	:
@@ -355,7 +354,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename, int out_filename_size, int decode_whole_file, int keep, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo )
+int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename, int decode_whole_file, int keep, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo )
 {
 	int filename_found = 0;
 	char buf[ UUENCODE_STRLEN_MAX ];
@@ -374,16 +373,8 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 	FILE *outf;
 	int outfo =0; 			// set if outfile was opened.
 	FILE *inf = NULL;
-	int output_filename_supplied = 0;
+	int output_filename_supplied = (out_filename != NULL) && (out_filename[0] != '\0');
 	int start_found = 0;
-
-	if ((out_filename != NULL))
-	{
-		if ((out_filename[0] != '\0'))
-		{
-			output_filename_supplied = 1;
-		}
-	}
 
 	bp = buf;
 
@@ -501,10 +492,11 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Located filename (%s), now decoding.\n", FL, bp);
 
 			// Clean up the file name
-			FNFILTER_filter( bp, out_filename_size );
+			FNFILTER_filter( bp, 255 ); /* the longest for most of filesystems */
 
 			// If our filename wasn't supplied via the params, then copy it over here
-			if (output_filename_supplied == 0) snprintf( out_filename, out_filename_size, "%s", bp );
+			if (output_filename_supplied == 0)
+				out_filename = strdup(bp);
 
 			// Create the new output full path
 
