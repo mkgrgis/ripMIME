@@ -370,8 +370,6 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 	int filecount = 0;
 	FFGET_FILE ffinf;	// Local static FFGET struct used if *f is  NULL
 	FFGET_FILE *finf;	// Points to either *f or &ffinf
-	FILE *result_f;
-	int result_fo =0; 			// set if outfile was opened.
 	FILE *inf = NULL;
 	int output_filename_supplied = (out_filename != NULL) && (out_filename[0] != '\0');
 	int start_found = 0;
@@ -489,6 +487,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 
 		if ((filename_found != 0)&&(bp))
 		{
+			MIME_element* mime_el = NULL;
 			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Located filename (%s), now decoding.\n", FL, bp);
 
 			// Clean up the file name
@@ -503,15 +502,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 			snprintf(fullpath, sizeof(fullpath), "%s/%s", unpack_metadata->dir, bp );
 			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Filename = (%s)\n", FL, fullpath);
 
-			result_f = fopen(fullpath, "wb");
-			if (!result_f)
-			{
-				LOGGER_log("%s:%d:UUENCODE_decode_uu:ERROR: Cannot open file '%s' (%s)", FL, fullpath,strerror(errno));
-				if (writebuffer) free(writebuffer);
-				uuencode_error = UUENCODE_STATUS_CANNOT_OPEN_FILE;
-				return -1;
-			}
-			else result_fo = 1;
+			mime_el = MIME_element_add_with_path (fullpath, unpack_metadata, hinfo);
 
 			// Allocate the write buffer.  By using the write buffer we gain an additional 10% in performance
 			// due to the lack of function call (fwrite) overheads
@@ -521,7 +512,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 			wbcount = 0;
 			wbpos = writebuffer;
 
-			while (result_f)
+			while (mime_el->f)
 			{
 				// for each input line
 				FFGET_fgets(buf, sizeof(buf), finf);
@@ -571,7 +562,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 					// In order to reduce function call overheads, we've bought the UUDecoding
 					// bit shifting routines into the UUDecode main decoding routines. This should
 					// save us about 250,000 function calls per Mb.
-					// UUENCODE_outdec(bp, result_f, n);
+					// UUENCODE_outdec(bp, mime_el->f, n);
 
 					char c[3];
 					int m = n;
@@ -585,7 +576,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 					if ( wbcount >= UUENCODE_WRITE_BUFFER_LIMIT )
 					{
 						size_t bc;
-						bc = fwrite(writebuffer, 1, wbcount, result_f);
+						bc = fwrite(writebuffer, 1, wbcount, mime_el->f);
 						if (bc != wbcount) {
 							LOGGER_log("%s:%d:ERROR: Attempted to write %ld bytes, only wrote %ld\n", FL, wbcount, bc);
 						}
@@ -612,16 +603,16 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 
 			} // While (1)
 
-			if ((result_fo)&&(wbcount > 0))
+			if ((mime_el->f != NULL)&&(wbcount > 0))
 			{
 				size_t bc;
-				bc = fwrite(writebuffer, 1, wbcount, result_f);
+				bc = fwrite(writebuffer, 1, wbcount, mime_el->f);
 				if (bc != wbcount) {
 					LOGGER_log("%s:%d:ERROR: Attempted to write %ld bytes, only wrote %ld\n", FL, wbcount, bc);
 				}
 			}
 
-			if (result_fo) fclose(result_f);
+			MIME_element_remove(mime_el);
 			// Call our reporting function, else, if no function is defined, use the default
 			//		standard call
 
