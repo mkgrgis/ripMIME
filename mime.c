@@ -1359,7 +1359,7 @@ int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIME
         if ( hinfo->content_transfer_encoding == _CTRANS_ENCODING_UUENCODE ) decode_entire_file = 0;
 
         //result = UUENCODE_decode_uu(NULL, unpack_metadata->dir, hinfo->filename, hinfo->uudec_name, sizeof(hinfo->uudec_name), decode_entire_file, keep );
-        result = UUENCODE_decode_uu(NULL, unpack_metadata->dir, full_decode_path, hinfo->uudec_name, sizeof(hinfo->uudec_name), decode_entire_file, keep );
+        result = UUENCODE_decode_uu(NULL, unpack_metadata->dir, full_decode_path, hinfo->uudec_name, sizeof(hinfo->uudec_name), decode_entire_file, keep, unpack_metadata, hinfo );
         if (result == -1)
         {
             switch (uuencode_error) {
@@ -1514,7 +1514,7 @@ int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIM
         //          propergate this value unintentionally to parent functions (ie, if you were thinking it was
         //          an error-status return value
 
-        result = UUENCODE_decode_uu( NULL, unpack_metadata->dir, ffname, hinfo->uudec_name, sizeof(hinfo->uudec_name), 1, keep );
+        result = UUENCODE_decode_uu( NULL, unpack_metadata->dir, ffname, hinfo->uudec_name, sizeof(hinfo->uudec_name), 1, keep, unpack_metadata, hinfo );
         if (result == -1)
         {
             switch (uuencode_error) {
@@ -1924,7 +1924,7 @@ int MIME_doubleCR_decode( char *filename, RIPMIME_output *unpack_metadata, struc
     {
         if (MIME_VERBOSE) LOGGER_log("Attempting to decode UUENCODED attachment from Double-CR delimeted attachment '%s'\n",filename);
         UUENCODE_set_doubleCR_mode(1);
-        result = UUENCODE_decode_uu(NULL, unpack_metadata->dir, filename, h.uudec_name, _MIMEH_FILENAMELEN_MAX , 1, 1 );
+        result = UUENCODE_decode_uu(NULL, unpack_metadata->dir, filename, h.uudec_name, _MIMEH_FILENAMELEN_MAX , 1, 1, unpack_metadata, hinfo );
         UUENCODE_set_doubleCR_mode(0);
         glb.attachment_count += result;
         result = 0;
@@ -2391,7 +2391,7 @@ int MIME_decode_encoding( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct
             if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_decode_encoding:DEBUG: Decoding UUENCODED format\n",FL);
             // Added as a test - remove if we can get this to work in a better way
             snprintf(hinfo->uudec_name,sizeof(hinfo->uudec_name),"%s",hinfo->filename);
-            result = UUENCODE_decode_uu(f, unpack_metadata->dir, hinfo->filename, hinfo->uudec_name, sizeof(hinfo->uudec_name), 0, keep );
+            result = UUENCODE_decode_uu(f, unpack_metadata->dir, hinfo->filename, hinfo->uudec_name, sizeof(hinfo->uudec_name), 0, keep, unpack_metadata, hinfo );
             glb.attachment_count += result;
             // Because this is a file-count, it's not really an 'error result' as such, so, set the
             //      return code back to 0!

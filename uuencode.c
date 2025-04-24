@@ -354,7 +354,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int UUENCODE_decode_uu( FFGET_FILE *f, char *unpackdir, char *input_filename, char *out_filename, int out_filename_size, int decode_whole_file, int keep )
+int UUENCODE_decode_uu( FFGET_FILE *f, char *unpackdir, char *input_filename, char *out_filename, int out_filename_size, int decode_whole_file, int keep, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo )
 {
 	int filename_found = 0;
 	char buf[ UUENCODE_STRLEN_MAX ];
