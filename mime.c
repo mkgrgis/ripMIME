@@ -133,6 +133,12 @@ typedef struct {
     int result;
 } MIME_element;
 
+typedef struct {
+    size_t size;
+    size_t capacity;
+    MIME_element** array;
+} dynamic_array;
+
 struct MIME_globals {
     int header_defect_count;
     int filecount;
@@ -185,11 +191,26 @@ struct MIME_globals {
     char subject[_MIME_STRLEN_MAX];
 
     int mime_count;
-    MIME_element *mime_arr;
+    dynamic_array* mime_arr;
 };
 
 static struct MIME_globals glb;
 static char scratch[1024];
+
+/* Dynamic array support*/
+#define INITIAL_SIZE 8
+
+// function prototypes
+//  array container functions
+void arrayInit(dynamic_array** arr_ptr);
+void freeArray(dynamic_array* container);
+
+// Basic Operation functions
+void insertItem(dynamic_array* container, MIME_element* item);
+void updateItem(dynamic_array* container, int i, MIME_element* item);
+int getItem(dynamic_array* container, int i);
+void deleteItem(dynamic_array* container, int i);
+void printArray(dynamic_array* container);
 
 /*-----------------------------------------------------------------\
   Function Name : MIME_version
@@ -1269,11 +1290,12 @@ int MIME_decode_OLE( RIPMIME_output *unpack_metadata, struct MIMEH_header_info *
 
 MIME_element* MIME_element_add (RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo)
 {
-    MIME_element * cur = malloc(sizeof(MIME_element));
+    MIME_element *cur = malloc(sizeof(MIME_element));
     int fullpath_len = strlen(unpack_metadata->dir) + strlen(hinfo->filename) + 3 * sizeof(char);
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_element_add:start\n",FL);
 
+    insertItem(glb.mime_arr, cur);
     cur->hinfo = hinfo;
     cur->id = glb.mime_count++;
     cur->fullpath = (char*)malloc(fullpath_len);
@@ -2143,6 +2165,7 @@ void MIME_init( void )
     glb.subject[0]='\0';
 
     glb.mime_count = 0;
+    arrayInit(&(glb.mime_arr));
 }
 
 /*-----------------------------------------------------------------\
@@ -3354,5 +3377,100 @@ int MIME_unpack( RIPMIME_output *unpack_metadata, char *mpname, int current_recu
 void MIME_close( void )
 {
     if (MIME_DNORMAL) LOGGER_log("%s:%d:MIME_close: start.",FL);
+    printArray(glb.mime_arr);
+
+    freeArray(glb.mime_arr);
+}
+
+//------Dynamic array function definitions------
+// Array initialization
+void arrayInit(dynamic_array** arr_ptr)
+{
+    dynamic_array *container;
+    container = (dynamic_array*)malloc(sizeof(dynamic_array));
+    if(!container) {
+        printf("Memory Allocation Failed\n");
+        exit(0);
+    }
+
+    container->size = 0;
+    container->capacity = INITIAL_SIZE;
+    container->array = (MIME_element **)malloc(INITIAL_SIZE * sizeof(MIME_element*));
+    if (!container->array){
+        printf("Memory Allocation Failed\n");
+        exit(0);
+    }
+
+    *arr_ptr = container;
+}
+
+//  Insertion Operation
+void insertItem(dynamic_array* container, MIME_element* item)
+{
+    if (container->size == container->capacity) {
+        MIME_element **temp = container->array;
+        container->capacity <<= 1;
+        container->array = realloc(container->array, container->capacity * sizeof(MIME_element*));
+        if(!container->array) {
+            printf("Out of Memory\n");
+            container->array = temp;
+            return;
+        }
+    }
+    container->array[container->size++] = item;
+}
+
+// Retrieve Item at Particular Index
+int getItem(dynamic_array* container, int index)
+{
+    if(index >= container->size) {
+        printf("Index Out of Bounds\n");
+        return -1;
+    }
+    return container->array[index];
+}
+
+// Update Operation
+void updateItem(dynamic_array* container, int index, MIME_element* item)
+{
+    if (index >= container->size) {
+        printf("Index Out of Bounds\n");
+        return;
+    }
+    container->array[index] = item;
+}
+
+// Delete Item from Particular Index
+void deleteItem(dynamic_array* container, int index)
+{
+    if(index >= container->size) {
+        printf("Index Out of Bounds\n");
+        return;
+    }
+
+    for (int i = index; i < container->size; i++) {
+        container->array[i] = container->array[i + 1];
+    }
+    container->size--;
+}
+
+// Array Traversal
+void printArray(dynamic_array* container)
+{
+    printf("Array elements: ");
+    for (int i = 0; i < container->size; i++) {
+        printf("%p ", container->array[i]);
+    }
+    printf("\nSize: ");
+    printf("%lu", container->size);
+    printf("\nCapacity: ");
+    printf("%lu\n", container->capacity);
+}
+
+// Freeing the memory allocated to the array
+void freeArray(dynamic_array* container)
+{
+    free(container->array);
+    free(container);
 }
 /*----------END OF MIME.c------------*/
