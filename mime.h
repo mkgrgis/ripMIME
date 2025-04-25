@@ -142,5 +142,6 @@ typedef struct {
 } MIME_element;
 
 MIME_element* MIME_element_add_with_path (char* fullpath, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo);
+void MIME_element_remove (MIME_element* cur);
 
 #endif
