@@ -14,10 +14,10 @@
 #include "ole.h"
 
 /** Sector ID values (predefined) **/
-#define OLE_SECTORID_FREE							-1 /** Unallocated sector **/
-#define OLE_SECTORID_ENDOFCHAIN					-2 /** Sector marks the end of the a sector-ID chain **/
-#define OLE_SECTORID_SAT							-3 /** Sector used by sector allocation Table  **/
-#define OLE_SECTORID_MSAT							-4 /** Sector used by master sector allocation Table **/
+#define OLE_SECTORID_FREE					-1 /** Unallocated sector **/
+#define OLE_SECTORID_ENDOFCHAIN				-2 /** Sector marks the end of the a sector-ID chain **/
+#define OLE_SECTORID_SAT					-3 /** Sector used by sector allocation Table  **/
+#define OLE_SECTORID_MSAT					-4 /** Sector used by master sector allocation Table **/
 
 // Main header accessors
 #define header_id(x)						((x) +0)
@@ -1395,25 +1395,13 @@ Changes:
 can use this in the sanity checking to see if the 
 requested sectors are outside of the possible valid
 filesize range.
-
+20220425-mkgrgis: rewrite fili size to seek, exclude FS operations
 \------------------------------------------------------------------*/
 int OLE_open_file( struct OLE_object *ole, char *fullpath )
 {
 	struct stat st;
 	int stat_result;
 	FILE *f;
-
-	stat_result = stat(fullpath, &st);
-	if (stat_result != 0) {
-		DOLE LOGGER_log("%s:%d:OLE_open_file:ERROR: Cannot locate file '%s' for opening (%s)",FL, fullpath, strerror(errno));
-		return OLEER_BAD_INPUT_FILE;
-	}
-
-	DOLE LOGGER_log("%s:%d:OLE_open_file:DEBUG: File size of %s = %ld",FL, fullpath, st.st_size);
-	if ((stat_result == 0) && (st.st_size < 512)) return OLEER_NOT_OLE_FILE;
-
-	ole->file_size = st.st_size;
-
 	f = fopen(fullpath,"r");
 	if (f == NULL)
 	{
@@ -1425,12 +1413,17 @@ int OLE_open_file( struct OLE_object *ole, char *fullpath )
 		return -1;
 	} else {
 		ole->f = f;
-		ole->file_size = st.st_size;
+		fseek(ole->f, 0L, SEEK_END);
+		ole->file_size = ftell(ole->f);
+		fseek(ole->f, 0L, SEEK_SET);
+		if (ole->file_size < 512) {
+			fclose(ole->f);
+			return OLEER_NOT_OLE_FILE;
+		}
 		ole->last_sector = -1;
 	}
 	return OLE_OK;
 }
-
 
 /*-----------------------------------------------------------------\
   Function Name	: OLE_open_directory
@@ -1595,53 +1588,6 @@ int OLE_terminate_and_return( struct OLE_object *ole, int result )
 	OLE_decode_file_done(ole);
 	return result;
 }
-
-
-#ifdef RIPOLE_WALK_TREE
-int OLE_walk_tree( struct OLE_object *ole, char *fname, char *decode_path, int depth ) 
-{
-
-	/** Sanity check **/
-
-	if (depth > 100) return 0;
-	if (ole->total_file_count > 10000) return 0;
-	if (element_type < 0) return 0;
-
-	switch (element_type) {
-
-		case STGTY_ROOT:
-			/** ROOT DIRECTORY ENTRY **/
-			/** ROOT DIRECTORY ENTRY **/
-			/** ROOT DIRECTORY ENTRY **/
-			DOLE LOGGER_log("%s:%d:OLE_walk_tree:DEBUG: Loading ministream/SmallBlockArray",FL);
-			ole->ministream = OLE_load_chain( ole, adir->start_sector );
-			if (ole->ministream == NULL) return OLEER_MINISTREAM_READ_FAIL;
-			DOLE LOGGER_log("%s:%d:OLE_decode_file:DEBUG: ministream done",FL);
-	}
-
-
-
-
-
-
-
-} else if (adir->element_type == STGTY_STORAGE) {
-	/** STORAGE ELEMENT **/
-	/** STORAGE ELEMENT **/
-	/** STORAGE ELEMENT **/
-	DOLE LOGGER_log("%s:%d:OLE_decode_file:DEBUG: Item is directory, start child is at index %d\n",FL,i);
-	ole->ministream = OLE_load_chain( ole, adir->start_sector );
-	if (ole->ministream == NULL) return OLEER_MINISTREAM_READ_FAIL;
-	DOLE LOGGER_log("%s:%d:OLE_decode_file:DEBUG: DIRECTORY ministream done",FL);
-
-
-}
-#endif
-
-
-
-
-
 
 /*-----------------------------------------------------------------\
   Date Code:	: 20081101-020137
