@@ -13,6 +13,11 @@
 #include "olestream-unwrap.h"
 #include "ole.h"
 
+#include "../ffget.h"
+#include "../strstack.h"
+#include "../mime_headers.h"
+#include "../mime.h"
+
 /** Sector ID values (predefined) **/
 #define OLE_SECTORID_FREE					-1 /** Unallocated sector **/
 #define OLE_SECTORID_ENDOFCHAIN				-2 /** Sector marks the end of the a sector-ID chain **/
@@ -1378,6 +1383,33 @@ unsigned char *OLE_load_chain( struct OLE_object *ole, int FAT_sector_start )
 }
 
 /*-----------------------------------------------------------------\
+  Function Name	: OLE_input_file_data_ini
+  Returns Type	: int
+  ----Parameter List
+  1. struct OLE_object *ole, 
+  ------------------
+  Exit Codes	: 
+  Side Effects	: 
+  --------------------------------------------------------------------
+Comments:
+
+--------------------------------------------------------------------
+Changes:
+\------------------------------------------------------------------*/
+int OLE_input_file_data_ini( struct OLE_object *ole )
+{
+		fseek(ole->f, 0L, SEEK_END);
+		ole->file_size = ftell(ole->f);
+		fseek(ole->f, 0L, SEEK_SET);
+		if (ole->file_size < OLE_HEADER_BLOCK_SIZE) {
+			fclose(ole->f);
+			return OLEER_NOT_OLE_FILE;
+		}
+		ole->last_sector = -1;
+	return OLE_OK;
+}
+
+/*-----------------------------------------------------------------\
   Function Name	: OLE_open_file
   Returns Type	: int
   ----Parameter List
@@ -1395,34 +1427,21 @@ Changes:
 can use this in the sanity checking to see if the 
 requested sectors are outside of the possible valid
 filesize range.
-20220425-mkgrgis: rewrite fili size to seek, exclude FS operations
+20220425-mkgrgis: rewrite file size to seek, exclude FS operations
 \------------------------------------------------------------------*/
 int OLE_open_file( struct OLE_object *ole, char *fullpath )
 {
-	struct stat st;
-	int stat_result;
-	FILE *f;
-	f = fopen(fullpath,"r");
-	if (f == NULL)
+	ole->f = fopen(fullpath,"r");
+	if (ole->f == NULL)
 	{
-		ole->f = NULL;
 		if (ole->quiet == 0)
 		{
 			LOGGER_log("%s:%d:OLE_open_file:ERROR:Cannot open %s for reading (%s)\n",FL,fullpath, strerror(errno));
 		}
 		return -1;
-	} else {
-		ole->f = f;
-		fseek(ole->f, 0L, SEEK_END);
-		ole->file_size = ftell(ole->f);
-		fseek(ole->f, 0L, SEEK_SET);
-		if (ole->file_size < 512) {
-			fclose(ole->f);
-			return OLEER_NOT_OLE_FILE;
-		}
-		ole->last_sector = -1;
 	}
-	return OLE_OK;
+	else
+		return OLE_input_file_data_ini(ole);
 }
 
 /*-----------------------------------------------------------------\
@@ -1508,29 +1527,18 @@ int OLE_store_stream( struct OLE_object *ole, char *stream_name, char *directory
 		LOGGER_log("%s:%d:OLE_store_stream:ERROR: Cannot compose full filename string from '%s' and '%s'", FL, directory, stream_name);
 		return -1;
 	} else {
-		FILE *f;
-
-		f = fopen(full_path,"w");
-		if (f == NULL)
+		MIME_element* mime_el = MIME_element_add_with_path (full_path, NULL, NULL);
+		size_t written_bytes = fwrite( stream, 1, stream_size, mime_el->f );
+		if (written_bytes != stream_size)
 		{
-			LOGGER_log("%s:%d:OLE_store_stream:ERROR: Cannot open %s for writing (%s)",FL, full_path, strerror(errno));
-			if (full_path) free(full_path);
-			return -1;
-		} else {
-			size_t written_bytes;
+			LOGGER_log("%s:%d:OLE_store_stream:WARNING: Only wrote %d of %d bytes to file %s",FL,written_bytes,stream_size,full_path);
+		}
+		MIME_element_remove (mime_el);
 
-			written_bytes = fwrite( stream, 1, stream_size, f );
-			if (written_bytes != stream_size)
-			{
-				LOGGER_log("%s:%d:OLE_store_stream:WARNING: Only wrote %d of %d bytes to file %s",FL,written_bytes,stream_size,full_path);
-			}
-			fclose(f);
-
-			if ((OLE_VNORMAL(ole->verbose))&&(ole->filename_report_fn != NULL))
-			{
-				ole->filename_report_fn( stream_name );
-			}
-		} // if file is valid
+		if ((OLE_VNORMAL(ole->verbose))&&(ole->filename_report_fn != NULL))
+		{
+			ole->filename_report_fn( stream_name );
+		}
 	} // if full_path is valid
 
 	if (full_path) free(full_path);
@@ -1686,38 +1694,11 @@ int OLE_decode_stream( struct OLE_object *ole,  struct OLE_directory_entry *adir
 	return result;
 }
 
-/*-----------------------------------------------------------------\
-  Function Name	: OLE_decode_file
-  Returns Type	: int
-  ----Parameter List
-  1. char *fname, 
-  2.  char *decode_path , 
-  ------------------
-  Exit Codes	: 
-  Side Effects	: 
-  --------------------------------------------------------------------
-Comments:
-
---------------------------------------------------------------------
-Changes:
-
-\------------------------------------------------------------------*/
-int OLE_decode_file( struct OLE_object *ole, char *fname, char *decode_path )
+int OLE_decode( struct OLE_object *ole, char *decode_path )
 {
 	unsigned char *current_property, *property_limit;
 	int result = 0;
 	int i;
-
-	// Reject any bad paramters.
-	if (ole == NULL) return OLEER_DECODE_NULL_OBJECT;
-	if (fname == NULL) return OLEER_DECODE_NULL_FILENAME;
-	if (decode_path == NULL) return OLEER_DECODE_NULL_PATH;
-
-	// We need to gain access to the OLE2 data file, without
-	//		this pretty much everything is pointless.
-	DOLE LOGGER_log("%s:%d:OLE_decode_file:DEBUG: opening %s", FL, fname );
-	result = OLE_open_file( ole, fname );
-	if (result != 0) return result;
 
 	// Try create the output directory which we're using
 	//		to write the decoded files out to.
@@ -1785,49 +1766,27 @@ int OLE_decode_file( struct OLE_object *ole, char *fname, char *decode_path )
 		{
 			DOLE LOGGER_log("%s:%d:OLE_decode_file:DEBUG: breaking out due to element type %d",FL, adir->element_type);
 			break;
-
 		} else if (adir->element_type == STGTY_ROOT){
-			/** ROOT DIRECTORY ENTRY **/
-			/** ROOT DIRECTORY ENTRY **/
 			/** ROOT DIRECTORY ENTRY **/
 			DOLE LOGGER_log("%s:%d:OLE_decode_file:DEBUG: Loading ministream/SmallBlockArray",FL);
 			ole->ministream = OLE_load_chain( ole, adir->start_sector );
 			if (ole->ministream == NULL) return OLEER_MINISTREAM_READ_FAIL;
 			DOLE LOGGER_log("%s:%d:OLE_decode_file:DEBUG: ministream done",FL);
-
-
-
-
-
-
-
 		} else if (adir->element_type == STGTY_STORAGE) {
-			/** STORAGE ELEMENT **/
-			/** STORAGE ELEMENT **/
 			/** STORAGE ELEMENT **/
 			DOLE LOGGER_log("%s:%d:OLE_decode_file:DEBUG: Item is directory, start child is at index %d\n",FL,i);
 			ole->ministream = OLE_load_chain( ole, adir->start_sector );
 			if (ole->ministream == NULL) return OLEER_MINISTREAM_READ_FAIL;
 			DOLE LOGGER_log("%s:%d:OLE_decode_file:DEBUG: DIRECTORY ministream done",FL);
-
-
-
-
 		} else if (adir->element_type == STGTY_STREAM) {
 			/** STREAM ELEMENT **/
-			/** STREAM ELEMENT **/
-			/** STREAM ELEMENT **/
 			OLE_decode_stream( ole, adir, decode_path );
-
-
-
 		} else {
 			/** If the element isn't of the above types then it's possibly 
 			 ** an empty element or just one used for the MSAT/SAT
 			 ** either way we just step over it and carry on **/
 			DOLE LOGGER_log("%s:%d:OLE_decode_file:DEBUG: Element type %d does not need to be handled",FL,adir->element_type);
 		}
-
 		// Jump to the next property record, which
 		//		is always 128 bytes ahead.
 		current_property += 128;
@@ -1837,14 +1796,41 @@ int OLE_decode_file( struct OLE_object *ole, char *fname, char *decode_path )
 
 	DOLE LOGGER_log("%s:%d:OLE_decode_file:DEBUG: Finished",FL);
 
-	/*
-	//if (ole->f) fclose(ole->f);
-	fclose(ole->f);
-	if (ole->FAT) free(ole->FAT);
-	if (ole->miniFAT) free(ole->miniFAT);
-	if (ole->ministream) free(ole->ministream);
-	if (ole->properties) free(ole->properties);
+	/* OLE_decode_file_done(ole);
 	 */
-
 	return OLE_OK;
+}
+
+/*-----------------------------------------------------------------\
+  Function Name	: OLE_decode_file
+  Returns Type	: int
+  ----Parameter List
+  1. char *fname, 
+  2.  char *decode_path , 
+  ------------------
+  Exit Codes	: 
+  Side Effects	: 
+  --------------------------------------------------------------------
+Comments:
+
+--------------------------------------------------------------------
+Changes:
+
+\------------------------------------------------------------------*/
+int OLE_decode_file( struct OLE_object *ole, char *fname, char *decode_path )
+{
+	int result = 0;
+
+	// Reject any bad paramters.
+	if (ole == NULL) return OLEER_DECODE_NULL_OBJECT;
+	if (fname == NULL) return OLEER_DECODE_NULL_FILENAME;
+	if (decode_path == NULL) return OLEER_DECODE_NULL_PATH;
+
+	// We need to gain access to the OLE2 data file, without
+	//		this pretty much everything is pointless.
+	DOLE LOGGER_log("%s:%d:OLE_decode_file:DEBUG: opening %s", FL, fname );
+	result = OLE_open_file( ole, fname );
+	if (result != 0) return result;
+
+	return OLE_decode( ole, decode_path );
 }
