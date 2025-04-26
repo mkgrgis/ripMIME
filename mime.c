@@ -2670,7 +2670,7 @@ int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
     /** 20041216-1102:PLD: Keep attempting to read headers until we get a sane set **/
     do {
         /** Read next set of headers, repeat until a sane set of headers are found **/
-        result = MIMEH_parse_headers(f,h);
+        result = MIMEH_parse_headers(f,h,unpack_metadata->dir);
         DMIME LOGGER_log("%s:%d:%s:DEBUG: Parsing of headers done, sanity = %d, result = %d",FL,h->sanity, result);
     } while ((h->sanity == 0)&&(result != -1));
 
@@ -2771,7 +2771,7 @@ int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
 
                     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding headers...\n",FL);
                     do {
-                        result = MIMEH_parse_headers(f,h);
+                        result = MIMEH_parse_headers(f,h,unpack_metadata->dir);
                     } while ((h->sanity == 0)&&(result != -1));
 
                     glb.header_defect_count += MIMEH_get_defect_count(h);

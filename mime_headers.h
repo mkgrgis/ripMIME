@@ -98,22 +98,22 @@
 
 struct MIMEH_header_info
 {
-	char scratch[_MIMEH_STRLEN_MAX +1];
+	char scratch[_MIMEH_STRLEN_MAX + 1];
 	int content_type;
-	char content_type_string[ _MIMEH_CONTENT_TYPE_MAX +1 ];
-	char content_description_string[ _MIMEH_CONTENT_DESCRIPTION_MAX +1 ];
-	char boundary[_MIMEH_STRLEN_MAX +1];
+	char content_type_string[ _MIMEH_CONTENT_TYPE_MAX + 1 ];
+	char content_description_string[ _MIMEH_CONTENT_DESCRIPTION_MAX + 1 ];
+	char boundary[_MIMEH_STRLEN_MAX + 1];
 	int boundary_located;
-	char subject[_MIMEH_SUBJECTLEN_MAX +1];
-	char filename[_MIMEH_FILENAMELEN_MAX +1];
-	char name[_MIMEH_STRLEN_MAX +1];
+	char subject[_MIMEH_SUBJECTLEN_MAX + 1];
+	char filename[_MIMEH_FILENAMELEN_MAX + 1];
+	char name[_MIMEH_STRLEN_MAX + 1];
 
 /** 20041217-1601:PLD: New header fields to keep **/
-	char from[_MIMEH_STRLEN_MAX +1];
-	char date[_MIMEH_STRLEN_MAX +1];
-	char to[_MIMEH_STRLEN_MAX +1];
-	char messageid[_MIMEH_STRLEN_MAX +1];
-	char received[_MIMEH_STRLEN_MAX +1];
+	char from[_MIMEH_STRLEN_MAX + 1];
+	char date[_MIMEH_STRLEN_MAX + 1];
+	char to[_MIMEH_STRLEN_MAX + 1];
+	char messageid[_MIMEH_STRLEN_MAX + 1];
+	char received[_MIMEH_STRLEN_MAX + 1];
 	/** end of new fields **/
 
 	// Store multiple filenames
@@ -122,14 +122,14 @@ struct MIMEH_header_info
 	struct SS_object ss_names;
 
 	int content_transfer_encoding;
-	char content_transfer_encoding_string[ _MIMEH_CONTENT_TRANSFER_ENCODING_MAX +1 ];
+	char content_transfer_encoding_string[ _MIMEH_CONTENT_TRANSFER_ENCODING_MAX + 1 ];
 	int content_disposition;
-	char content_disposition_string[ _MIMEH_CONTENT_DISPOSITION_MAX +1 ];
+	char content_disposition_string[ _MIMEH_CONTENT_DISPOSITION_MAX + 1 ];
 	//int charset;
-	char charset[ _MIMEH_CHARSET_MAX +1 ];
+	char charset[ _MIMEH_CHARSET_MAX + 1 ];
 	int format;
 	int file_has_uuencode;
-	char uudec_name[_MIMEH_FILENAMELEN_MAX +1];	// UUDecode name. This is a post-decode information field.
+	char uudec_name[_MIMEH_FILENAMELEN_MAX + 1];	// UUDecode name. This is a post-decode information field.
 	int current_recursion_level;
 
 	// Malformed email reporting
@@ -149,16 +149,13 @@ struct MIMEH_header_info
 	int crlf_count; // 200811151149:PLD: Tally's the number of CRLF lines
 	int crcr_count; // 200811151149:PLD: Tally's the number of CRLF lines
 	int lf_count; // 200811151149:PLD: Tally's the number of  LF only lines
-
 };
-
 
 #ifdef RIPMIME_V2XX
 struct MIMEH_header_node {
 	struct MIMEH_header_info *header_list;
 	struct MIMEH_header_node *next;
 };
-
 
 struct MIMEH_email_info {
 	char mailpack_name[1024];
@@ -169,7 +166,7 @@ struct MIMEH_email_info {
 
 int MIMEH_version(void);
 
-int MIMEH_init( void );
+void MIMEH_init( void );
 int MIMEH_set_debug( int level );
 int MIMEH_set_verbosity( int level );
 int MIMEH_set_verbosity_contenttype( int level );
@@ -199,12 +196,12 @@ char *MIMEH_get_doubleCR_name( void );
 int MIMEH_set_header_longsearch( int level );
 int MIMEH_headers_clearcount( struct MIMEH_header_info *hinfo );
 
-int MIMEH_read_headers( struct MIMEH_header_info *hinfo, FFGET_FILE *f );
+int MIMEH_read_headers( struct MIMEH_header_info *hinfo, FFGET_FILE *f, char* output_dir );
 
-int MIMEH_headers_get( struct MIMEH_header_info *hinfo, FFGET_FILE *f );
+int MIMEH_headers_get( struct MIMEH_header_info *hinfo, FFGET_FILE *f, char* output_dir);
 int MIMEH_headers_process( struct MIMEH_header_info *hinfo, char *headers );
 int MIMEH_headers_cleanup();
-int MIMEH_parse_headers( FFGET_FILE *f, struct MIMEH_header_info *hinfo );
+int MIMEH_parse_headers( FFGET_FILE *f, struct MIMEH_header_info *hinfo, char* output_dir );
 
 
 int MIMEH_display_info( struct MIMEH_header_info *hinfo );
@@ -217,6 +214,6 @@ int MIMEH_get_defect_count( struct MIMEH_header_info *hinfo );
 
 int MIMEH_set_report_MIME( int level );
 
-int MIMEH_read_primary_headers( char *fname, struct MIMEH_header_info *hinfo );
+int MIMEH_read_primary_headers( char *fname, struct MIMEH_header_info *hinfo, char* output_dir );
 
 #endif

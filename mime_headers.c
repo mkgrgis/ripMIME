@@ -47,6 +47,16 @@
 
 #define DMIMEH if ((glb.debug >= _MIMEH_DEBUG_NORMAL))
 
+#define max(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a > _b ? _a : _b; })
+
+#define min(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a < _b ? _a : _b; })
+
 char *MIMEH_defect_description_array[_MIMEH_DEFECT_ARRAY_SIZE];
 
 struct MIMEH_globals {
@@ -74,7 +84,6 @@ struct MIMEH_globals {
     int header_longsearch; // keep searching until valid headers are found - this is used to filter out qmail bounced emails - breaks RFC's but people are wanting it :-(
     int longsearch_limit;   // how many segments do we attempt to look ahead...
 
-    char output_dir[_MIMEH_STRLEN_MAX +1];
     FILE *header_file;
     FILE *original_header_file;
     int original_header_save_to_file;
@@ -118,7 +127,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIMEH_init( void )
+void MIMEH_init( void )
 {
     glb.doubleCR = 0;
     glb.headerline = NULL;
@@ -137,13 +146,10 @@ int MIMEH_init( void )
     glb.header_fix = 1;
     glb.verbose = 0;
     glb.verbose_contenttype = 0;
-    glb.output_dir[0]='\0';
     glb.doubleCRname[0]='\0';
     glb.appledouble_filename[0]='\0';
     glb.header_longsearch=0;
     glb.longsearch_limit=1;
-
-    return 0;
 }
 
 /*-----------------------------------------------------------------\
@@ -287,26 +293,6 @@ int MIMEH_set_debug( int level )
 {
     glb.debug = level;
     return glb.debug;
-}
-
-/*-----------------------------------------------------------------\
-  Function Name : MIMEH_set_outputdir
-  Returns Type  : int
-  ----Parameter List
-  1. char *dir ,
-  ------------------
-  Exit Codes    :
-  Side Effects  :
-  --------------------------------------------------------------------
-Comments:
-
---------------------------------------------------------------------
-Changes:
-\------------------------------------------------------------------*/
-int MIMEH_set_outputdir( char *dir )
-{
-    if (dir) snprintf(glb.output_dir,_MIMEH_STRLEN_MAX,"%s",dir);
-    return 0;
 }
 
 /*-----------------------------------------------------------------\
@@ -742,7 +728,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIMEH_save_doubleCR( FFGET_FILE *f )
+int MIMEH_save_doubleCR( FFGET_FILE *f, char * output_dir )
 {
     //char c;
     int c;
@@ -752,7 +738,7 @@ int MIMEH_save_doubleCR( FFGET_FILE *f )
     // Determine a file name we can use.
     do {
         glb.doubleCR_count++;
-        snprintf(glb.doubleCRname,_MIMEH_STRLEN_MAX,"%s/doubleCR.%d",glb.output_dir,glb.doubleCR_count);
+        snprintf(glb.doubleCRname,_MIMEH_STRLEN_MAX,"%s/doubleCR.%d",output_dir,glb.doubleCR_count);
     }
     while (stat(glb.doubleCRname, &st) == 0);
 
@@ -1065,7 +1051,7 @@ Input:
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIMEH_read_headers( struct MIMEH_header_info *hinfo, FFGET_FILE *f )
+int MIMEH_read_headers( struct MIMEH_header_info *hinfo, FFGET_FILE *f, char* output_dir )
 {
     char buffer[_MIMEH_STRLEN_MAX+1];
     int totalsize=0;
@@ -1240,7 +1226,7 @@ int MIMEH_read_headers( struct MIMEH_header_info *hinfo, FFGET_FILE *f )
             {
                 if (glb.doubleCR_save != 0)
                 {
-                    MIMEH_save_doubleCR(f);
+                    MIMEH_save_doubleCR(f, output_dir);
                     glb.doubleCR = 1;
                 }
                 FFGET_doubleCR = 0;
@@ -1954,8 +1940,6 @@ int MIMEH_parse_contenttype( char *header_name, char *header_value, struct MIMEH
     char *hv = strdup( header_value );
 
     // CONTENT TYPE -------------------------------
-    // CONTENT TYPE -------------------------------
-    // CONTENT TYPE -------------------------------
 
     DMIMEH LOGGER_log("%s:%d:MIMEH_parse_contenttype:DEBUG: Start",FL);
 
@@ -1993,11 +1977,12 @@ int MIMEH_parse_contenttype( char *header_name, char *header_value, struct MIMEH
             hinfo->content_type = _CTYPE_APPLICATION_APPLEFILE;
             if ( hinfo->filename[0] == '\0' )
             {
-                if (strlen(glb.appledouble_filename)>0)
+                int l = strlen(glb.appledouble_filename);
+                if (l>0)
                 {
-                    snprintf(hinfo->filename, sizeof(hinfo->filename), "%s.applemeta", glb.appledouble_filename );
+                    snprintf(hinfo->filename, _MIMEH_FILENAMELEN_MAX, "%s.applemeta", glb.appledouble_filename );
                 } else {
-                    snprintf(hinfo->filename, sizeof(hinfo->filename), "applefile");
+                    snprintf(hinfo->filename, _MIMEH_FILENAMELEN_MAX, "applefile");
                 }
             }
         }
@@ -2017,7 +2002,6 @@ int MIMEH_parse_contenttype( char *header_name, char *header_value, struct MIMEH
             hinfo->x_mac = 1;
             FNFILTER_set_mac(hinfo->x_mac);
         }
-
 
         // Copy the string to our content-type string storage field
         p = header_value;
@@ -2078,10 +2062,7 @@ int MIMEH_parse_contenttype( char *header_name, char *header_value, struct MIMEH
 
                 /**
                  ** Look for name or filename specifications in the headers
-                 ** Look for name or filename specifications in the headers
-                 ** Look for name or filename specifications in the headers
                  **/
-
                 return_value = MIMEH_parse_header_parameter( hinfo, param, "name", hinfo->name, sizeof(hinfo->name), &data_end_point);
                 /** Update param to point where data_end_point is
                  ** this is so when we come around here again due
@@ -2119,12 +2100,7 @@ int MIMEH_parse_contenttype( char *header_name, char *header_value, struct MIMEH
 
                 } /* If a filename was located in the headers */
 
-
-
-
                 /**
-                 ** Look for the MIME Boundary specification in the headers
-                 ** Look for the MIME Boundary specification in the headers
                  ** Look for the MIME Boundary specification in the headers
                  **/
                 return_value = MIMEH_parse_header_parameter(hinfo, param, "boundary", hinfo->boundary, sizeof(hinfo->boundary), &data_end_point);
@@ -2169,17 +2145,7 @@ int MIMEH_parse_contenttype( char *header_name, char *header_value, struct MIMEH
     if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_contenttype:DEBUG: end.",FL);
 
     return 0;
-
 }
-
-
-
-
-
-
-
-
-
 
 /*-----------------------------------------------------------------\
   Function Name : MIMEH_parse_contentlocation
@@ -2203,9 +2169,6 @@ int MIMEH_parse_contentlocation( char *header_name, char *header_value, struct M
     char *p, *q;
 
     // CONTENT LOCATION -------------------------------
-    // CONTENT LOCATION -------------------------------
-    // CONTENT LOCATION -------------------------------
-
     PLD_strlower( header_name );
     p = strstr(header_name,"content-location");
     if (p)
@@ -2233,23 +2196,8 @@ int MIMEH_parse_contentlocation( char *header_name, char *header_value, struct M
 
         }
     }
-
     return 0;
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /*-----------------------------------------------------------------\
   Function Name : MIMEH_parse_contenttransferencoding
@@ -2274,10 +2222,6 @@ int MIMEH_parse_contenttransferencoding( char *header_name, char *header_value, 
     char c = '\n';
 
     // CONTENT TRANSFER ENCODING ---------------------
-    // CONTENT TRANSFER ENCODING ---------------------
-    // CONTENT TRANSFER ENCODING ---------------------
-
-
     p = strstr(header_name,"content-transfer-encoding");
     if (p)
     {
@@ -2357,9 +2301,7 @@ int MIMEH_parse_contenttransferencoding( char *header_name, char *header_value, 
         //      which use the data.
         if (q != NULL) *q = c;
     }
-
     return 0;
-
 }
 
 /*-----------------------------------------------------------------\
@@ -2385,9 +2327,6 @@ int MIMEH_parse_contentdisposition( char *header_name, char *header_value, struc
     char *hv = strdup(header_value);
 
     // CONTENT DISPOSITION ------------------------------
-    // CONTENT DISPOSITION ------------------------------
-    // CONTENT DISPOSITION ------------------------------
-
     //LOGGER_log("%s:%d:DEBUG: Headers='%s'",FL,header_value);
     p = strstr(header_name,"content-disposition");
     if (p != NULL)
@@ -2498,9 +2437,6 @@ int MIMEH_parse_contentdisposition( char *header_name, char *header_value, struc
     return 0;
 }
 
-
-
-
 /*-----------------------------------------------------------------\
   Function Name : MIMEH_parse_subject
   Returns Type  : int
@@ -2547,9 +2483,7 @@ int MIMEH_parse_generic( char *header_name, char *header_value, struct MIMEH_hea
                 hinfo->sanity++;
                 break;
         }
-
     }
-
     return 0;
 }
 
@@ -2579,9 +2513,6 @@ int MIMEH_parse_subject( char *header_name, char *header_value, struct MIMEH_hea
     return result;
 }
 
-
-
-
 /*-----------------------------------------------------------------\
   Function Name : MIMEH_parse_date
   Returns Type  : int
@@ -2603,8 +2534,6 @@ int MIMEH_parse_date( char *header_name, char *header_value, struct MIMEH_header
 {
     return MIMEH_parse_generic( header_name, header_value, hinfo, "date", hinfo->date, sizeof(hinfo->date) );
 }
-
-
 
 /*-----------------------------------------------------------------\
   Function Name : MIMEH_parse_from
@@ -2870,7 +2799,6 @@ int MIMEH_headers_process( struct MIMEH_header_info *hinfo, char *headers )
                 MIMEH_parse_received( header_name, header_value, hinfo );
                 MIMEH_parse_charset( header_name, header_value, hinfo );
 
-
                 if (hinfo->filename[0] == '\0')
                 {
                     MIMEH_parse_contentlocation( header_name, header_value, hinfo );
@@ -2880,18 +2808,17 @@ int MIMEH_headers_process( struct MIMEH_header_info *hinfo, char *headers )
                 if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_headerss:DEBUG: Header value end position is NULL",FL);
             }
         }
-
-
-
     } // while
 
     // Final analysis on our headers:
     if ( hinfo->content_type == _CTYPE_MULTIPART_APPLEDOUBLE )
     {
-        char tmp[128];
-        snprintf( tmp, sizeof(tmp), "mac-%s", hinfo->filename );
-        snprintf( hinfo->filename, sizeof(hinfo->filename), "%s", tmp );
-        snprintf( hinfo->name, sizeof(hinfo->name), "%s", tmp );
+        int len = strlen(hinfo->filename);
+        char * tmp = malloc(len + 4);
+        snprintf( tmp, min(_MIMEH_FILENAMELEN_MAX, len + 4), "mac-%s", hinfo->filename );
+        strncat(hinfo->filename, tmp, min(_MIMEH_FILENAMELEN_MAX, len));
+        strncat(hinfo->name, tmp, min(_MIMEH_STRLEN_MAX, len));
+        free(tmp);
     }
 
     // PLD:20031205
@@ -2911,7 +2838,6 @@ int MIMEH_headers_process( struct MIMEH_header_info *hinfo, char *headers )
         }
     }
 
-
     if (safehl)
     {
         free(safehl);
@@ -2922,7 +2848,6 @@ int MIMEH_headers_process( struct MIMEH_header_info *hinfo, char *headers )
 
     return 0;
 }
-
 
 /*-----------------------------------------------------------------\
   Date Code:    : 20081124-184934
@@ -2965,7 +2890,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIMEH_headers_get( struct MIMEH_header_info *hinfo, FFGET_FILE *f )
+int MIMEH_headers_get( struct MIMEH_header_info *hinfo, FFGET_FILE *f, char* output_dir )
 {
     int result = 0;
 
@@ -2997,8 +2922,6 @@ int MIMEH_headers_get( struct MIMEH_header_info *hinfo, FFGET_FILE *f )
         if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_headers_get:DEBUG: ffget value of %d offered us no guide for the delimeter", FL, f->linebreak);
     }
 
-
-
     // Initialise header defects array.
     hinfo->header_defect_count = 0;
     memset(hinfo->defects, 0, sizeof(int) *_MIMEH_DEFECT_ARRAY_SIZE);
@@ -3008,7 +2931,7 @@ int MIMEH_headers_get( struct MIMEH_header_info *hinfo, FFGET_FILE *f )
 
     // Read from the file, the headers we need
     FFGET_set_watch_SDL(1);
-    result = MIMEH_read_headers(hinfo, f);
+    result = MIMEH_read_headers(hinfo, f, output_dir);
     FFGET_set_watch_SDL(0);
 
     if (hinfo->lf_count > hinfo->crlf_count) {
@@ -3084,7 +3007,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIMEH_parse_headers( FFGET_FILE *f, struct MIMEH_header_info *hinfo )
+int MIMEH_parse_headers( FFGET_FILE *f, struct MIMEH_header_info *hinfo, char *output_dir )
 {
     int result = 0;
     DMIMEH LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: Start [F=%p, hinfo=%p]\n", FL, f, hinfo);
@@ -3094,7 +3017,7 @@ int MIMEH_parse_headers( FFGET_FILE *f, struct MIMEH_header_info *hinfo )
 
     /** Proceed to read, process and finish headers **/
     DMIMEH LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: Getting headers",FL);
-    if ( result == 0 ) result = MIMEH_headers_get( hinfo, f );
+    if ( result == 0 ) result = MIMEH_headers_get( hinfo, f, output_dir );
     DMIMEH LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: Processing headers",FL);
     if ( result == 0 ) result = MIMEH_headers_process( hinfo, glb.headerline );
     DMIMEH LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: cleanup of headers",FL);
@@ -3186,7 +3109,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIMEH_read_primary_headers( char *fname, struct MIMEH_header_info *hinfo )
+int MIMEH_read_primary_headers( char *fname, struct MIMEH_header_info *hinfo, char* output_dir )
 {
     FFGET_FILE F;
     FILE *f;
@@ -3198,7 +3121,7 @@ int MIMEH_read_primary_headers( char *fname, struct MIMEH_header_info *hinfo )
     }
     FFGET_setstream(&F,f);
 
-    MIMEH_parse_headers(&F, hinfo);
+    MIMEH_parse_headers(&F, hinfo, output_dir);
     fclose(f);
 
     return 0;
