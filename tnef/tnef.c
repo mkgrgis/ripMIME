@@ -669,6 +669,54 @@ int TNEF_decode_tnef(uint8 *tnef_stream, int size, char* file_dir)
 	return 0;
 }
 
+int TNEF_file_processing( FILE *fp, char *file_dir )
+{
+	uint8 *tnef_stream;
+	int size, nread;
+
+	// Get the filesize
+	fseek(fp, 0L, SEEK_END);
+	size = ftell(fp);
+	fseek(fp, 0L, SEEK_SET);
+
+	// Allocate enough memory to read in the ENTIRE file
+	// FIXME - This could be a real consumer if multiple
+	// instances of TNEF decoding is going on
+	TNEF_glb.tnef_home = tnef_stream = (uint8 *)malloc(size);
+	TNEF_glb.tnef_limit = TNEF_glb.tnef_home +size;
+
+	// If we were unable to allocate enough memory, then we
+	// should report this
+	if (tnef_stream == NULL)
+	{
+		LOGGER_log("%s:%d:%s:ERROR: When allocating %d bytes for loading file (%s)\n", FL,__func__, size,strerror(errno));
+		if (TNEF_glb.tnef_home) free(TNEF_glb.tnef_home);
+		return -1;
+	}
+
+	// Attempt to read in the entire file
+	nread = fread(tnef_stream, sizeof(uint8), size, fp);
+
+	if (TNEF_DEBUG) LOGGER_log("%s:%d:%s:DEBUG: Read %d bytes\n", FL,__func__, nread);
+
+	// If we did not read in all the bytes, then let syslogs know!
+	if (nread < size)
+	{
+		LOGGER_log("%s:%d:%s:ERROR: while reading stream from TNEF file (%s)\n", FL,__func__, strerror(errno));
+		if (TNEF_glb.tnef_home) free(TNEF_glb.tnef_home);
+		return -1;
+	}
+
+	// Proceed to decode the file
+	TNEF_decode_tnef(tnef_stream,size, file_dir);
+
+	if (TNEF_glb.tnef_home) free(TNEF_glb.tnef_home);
+
+	if (TNEF_DEBUG) LOGGER_log("%s:%d:%s:DEBUG: finished decoding.\n",FL,__func__);
+
+	return 0;
+}
+
 /*------------------------------------------------------------------------
 Procedure:     TNEF_main ID:1
 Purpose:       Decodes a given TNEF encoded file
@@ -692,51 +740,10 @@ int TNEF_main( char *filename, char *file_dir )
 		if (TNEF_glb.tnef_home) free(TNEF_glb.tnef_home);
 		return -1;
 	}
-
-	// Get the filesize
-	fseek(fp, 0L, SEEK_END);
-	size = ftell(fp);
-	fseek(fp, 0L, SEEK_SET);
-
-	// Allocate enough memory to read in the ENTIRE file
-	// FIXME - This could be a real consumer if multiple
-	// instances of TNEF decoding is going on
-	TNEF_glb.tnef_home = tnef_stream = (uint8 *)malloc(size);
-	TNEF_glb.tnef_limit = TNEF_glb.tnef_home +size;
-
-	// If we were unable to allocate enough memory, then we
-	// should report this
-	if (tnef_stream == NULL)
-	{
-		LOGGER_log("%s:%d:%s:ERROR: When allocating %d bytes for loading file (%s)\n", FL,__func__, size,strerror(errno));
-		if (TNEF_glb.tnef_home) free(TNEF_glb.tnef_home);
-		return -1;
-	}
-
-
-	// Attempt to read in the entire file
-	nread = fread(tnef_stream, sizeof(uint8), size, fp);
-
-	if (TNEF_DEBUG) LOGGER_log("%s:%d:%s:DEBUG: Read %d bytes\n", FL,__func__, nread);
-
-	// If we did not read in all the bytes, then let syslogs know!
-	if (nread < size)
-	{
-		LOGGER_log("%s:%d:%s:ERROR: while reading stream from file %s (%s)\n", FL,__func__, filename,strerror(errno));
-		if (TNEF_glb.tnef_home) free(TNEF_glb.tnef_home);
-		return -1;
-	}
-
+	TNEF_file_processing(fp, file_dir);
+	
 	// Close the file
 	fclose(fp);
-
-	// Proceed to decode the file
-	TNEF_decode_tnef(tnef_stream,size, file_dir);
-
-	if (TNEF_glb.tnef_home) free(TNEF_glb.tnef_home);
-
-	if (TNEF_DEBUG) LOGGER_log("%s:%d:%s:DEBUG: finished decoding.\n",FL,__func__);
-
 	return 0;
 }
 
