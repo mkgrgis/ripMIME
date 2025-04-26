@@ -108,6 +108,43 @@ void MIME_element_remove (MIME_element* cur)
         LOGGER_log("%s:%d:MIMEH_save_doubleCR:ERROR: unable to open '%s' to write (%s)", FL,glb.doubleCRname,strerror(errno));
         return -1;
     }
+    
+ FILE *fptr1, *fptr2;
+    char filename[100];
+    int c;
+
+    printf("Enter the filename to open for reading: ");
+    scanf("%s", filename);
+
+    // Open one file for reading
+    fptr1 = fopen(filename, "r");
+    if (fptr1 == NULL)
+    {
+        printf("Cannot open file %s\n", filename);
+        exit(1);
+    }
+
+    printf("Enter the filename to open for writing: ");
+    scanf("%s", filename);
+
+    // Open another file for writing
+    fptr2 = fopen(filename, "w");
+    if (fptr2 == NULL)
+    {
+        printf("Cannot open file %s\n", filename);
+        exit(1);
+    }
+
+    // Read contents from file
+    while ((c = fgetc(fptr1)) != EOF)
+    {
+        fputc(c, fptr2);
+    }
+
+    printf("Contents copied to %s\n", filename);
+
+    fclose(fptr1);
+    fclose(fptr2);    
 */
 
 
