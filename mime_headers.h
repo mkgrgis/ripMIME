@@ -95,7 +95,6 @@
 #define MIMEH_DEFECT_MULTIPLE_NAMES 9
 #define MIMEH_DEFECT_MULTIPLE_FILENAMES 10
 
-
 struct MIMEH_header_info
 {
 	char scratch[_MIMEH_STRLEN_MAX + 1];

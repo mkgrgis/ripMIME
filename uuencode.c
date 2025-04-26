@@ -19,6 +19,8 @@ The biggest issue is that the interfaces to the decoding functions are too speci
 #include "pldstr.h"
 #include "ffget.h"
 #include "filename-filters.h"
+#include "strstack.h"
+#include "mime_headers.h"
 #include "mime_element.h"
 
 #include "uuencode.h"
@@ -359,7 +361,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 {
 	int filename_found = 0;
 	char buf[ UUENCODE_STRLEN_MAX ];
-	char *bp = buf, *fn, *fp;
+	char *bp = buf, *fn = NULL, *fp = NULL;
 	int n, i, expected;
 	struct PLD_strtok tx;
 	unsigned char *writebuffer = NULL;
@@ -484,14 +486,8 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 
 		if ((filename_found != 0)&&(bp))
 		{
-			MIME_element* mime_el = NULL;
-            char * fn;
-            int fn_l = strlen(unpack_metadata->dir) + strlen(bp) + sizeof(char) * 2;
+			MIME_element* cur_mime = NULL;
 
-            fn = malloc(fn_l);
-            snprintf(fn,fn_l,"%s/%s",unpack_metadata->dir,bp);        
-            
-			
 			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Located filename (%s), now decoding.\n", FL, bp);
 
 			// Clean up the file name
@@ -503,18 +499,16 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 
 			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Filename = (%s)\n", FL, fn);
 
-			mime_el = MIME_element_add_with_path (fn, unpack_metadata, hinfo, 1, filecount);
-			free(fn);
+			cur_mime = MIME_element_add (NULL, unpack_metadata, fn, hinfo->content_type_string, hinfo->content_transfer_encoding_string, hinfo->name, hinfo->current_recursion_level, 1, filecount);
 
 			// Allocate the write buffer.  By using the write buffer we gain an additional 10% in performance
 			// due to the lack of function call (fwrite) overheads
 
 			// Okay, now we have the UUDECODE data to decode...
-
 			wbcount = 0;
 			wbpos = writebuffer;
 
-			while (mime_el->f)
+			while (cur_mime->f)
 			{
 				// for each input line
 				FFGET_fgets(buf, sizeof(buf), finf);
@@ -564,7 +558,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 					// In order to reduce function call overheads, we've bought the UUDecoding
 					// bit shifting routines into the UUDecode main decoding routines. This should
 					// save us about 250,000 function calls per Mb.
-					// UUENCODE_outdec(bp, mime_el->f, n);
+					// UUENCODE_outdec(bp, cur_mime->f, n);
 
 					char c[3];
 					int m = n;
@@ -578,7 +572,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 					if ( wbcount >= UUENCODE_WRITE_BUFFER_LIMIT )
 					{
 						size_t bc;
-						bc = fwrite(writebuffer, 1, wbcount, mime_el->f);
+						bc = fwrite(writebuffer, 1, wbcount, cur_mime->f);
 						if (bc != wbcount) {
 							LOGGER_log("%s:%d:ERROR: Attempted to write %ld bytes, only wrote %ld\n", FL, wbcount, bc);
 						}
@@ -605,16 +599,16 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 
 			} // While (1)
 
-			if ((mime_el->f != NULL)&&(wbcount > 0))
+			if ((cur_mime->f != NULL)&&(wbcount > 0))
 			{
-				size_t bc = fwrite(writebuffer, 1, wbcount, mime_el->f);
+				size_t bc = fwrite(writebuffer, 1, wbcount, cur_mime->f);
 
 				if (bc != wbcount) {
 					LOGGER_log("%s:%d:ERROR: Attempted to write %ld bytes, only wrote %ld\n", FL, wbcount, bc);
 				}
 			}
 
-			MIME_element_remove(mime_el);
+			MIME_element_remove(cur_mime);
 			// Call our reporting function, else, if no function is defined, use the default
 			//		standard call
 

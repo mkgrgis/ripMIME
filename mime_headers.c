@@ -24,8 +24,8 @@
 #include <ctype.h>
 #include <errno.h>
 #include <ctype.h>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "ffget.h"
@@ -60,7 +60,6 @@
 char *MIMEH_defect_description_array[_MIMEH_DEFECT_ARRAY_SIZE];
 
 struct MIMEH_globals {
-
     int doubleCR;
     int doubleCR_save;
     char doubleCRname[_MIMEH_STRLEN_MAX +1];

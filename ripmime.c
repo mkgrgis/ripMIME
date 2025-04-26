@@ -590,7 +590,6 @@ int RIPMIME_unpack_single( struct RIPMIME_globals *glb, char *fname )
        alarm(glb->timeout);
    }
 
-   MIMEH_set_outputdir (glb->output->dir);
    result = MIME_unpack (glb->output, fname, 0);
 
    // do any last minute things
@@ -724,9 +723,7 @@ int main (int argc, char **argv)
    MIME_set_header_longsearch(1); // 20040310-0117:PLD - Added by default as it seems stable, use --disable-qmail-bounce to turn off
    MIME_set_renamemethod (_MIME_RENAME_METHOD_INFIX);
 
-
    RIPMIME_parse_parameters (&glb, argc, argv);
-
 
    // if our input filename wasn't specified, then we better let the user know!
    if (!glb.inputfile)
@@ -736,7 +733,6 @@ int main (int argc, char **argv)
    }
 
    // Fire up the randomizer
-
    srand (time (NULL));
 
    // clean up the output directory name if required (remove any trailing /'s, as suggested by James Cownie 03/02/2001

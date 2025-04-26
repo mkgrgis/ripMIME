@@ -141,9 +141,8 @@ int OLE_follow_minichain( struct OLE_object *ole, int miniFAT_sector_start );
 unsigned char *OLE_load_minichain( struct OLE_object *ole, int miniFAT_sector_start );
 unsigned char *OLE_load_chain( struct OLE_object *ole, int FAT_sector_start );
 int OLE_open_file( struct OLE_object *ole, char *fullpath );
-int OLE_decode_file( struct OLE_object *ole, char *fname, char *decode_path );
-int OLE_decode_file_done( struct OLE_object *ole );
-
+int OLE_decode_file( struct OLE_object *ole, char *fname, RIPMIME_output *unpack_metadata );
+void OLE_decode_file_done( struct OLE_object *ole );
 
 // Our callbacks.
 int OLE_set_filename_report_fn( struct OLE_object *ole, int (*ptr_to_fn)(char *) );
