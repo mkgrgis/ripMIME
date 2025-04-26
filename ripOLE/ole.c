@@ -16,7 +16,7 @@
 #include "../ffget.h"
 #include "../strstack.h"
 #include "../mime_headers.h"
-#include "../mime.h"
+#include "../mime_element.h"
 
 /** Sector ID values (predefined) **/
 #define OLE_SECTORID_FREE					-1 /** Unallocated sector **/
@@ -1527,7 +1527,7 @@ int OLE_store_stream( struct OLE_object *ole, char *stream_name, char *directory
 		LOGGER_log("%s:%d:OLE_store_stream:ERROR: Cannot compose full filename string from '%s' and '%s'", FL, directory, stream_name);
 		return -1;
 	} else {
-		MIME_element* mime_el = MIME_element_add_with_path (full_path, NULL, NULL);
+		MIME_element* mime_el = MIME_element_add_with_path (full_path, NULL, NULL, 1, 1);
 		size_t written_bytes = fwrite( stream, 1, stream_size, mime_el->f );
 		if (written_bytes != stream_size)
 		{

@@ -48,6 +48,8 @@
 #include "pldstr.h"
 #include "boundary-stack.h"
 #include "ffget.h"
+#include "strstack.h"
+#include "mime_element.h"
 #include "mime.h"
 #include "tnef/tnef_api.h"
 #include "ripOLE/ole.h"
@@ -55,6 +57,7 @@
 #include "uuencode.h"
 #include "filename-filters.h"
 #include "logger.h"
+
 
 int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int current_recursion_level, struct SS_object *ss );
 int MIME_unpack_single( RIPMIME_output *unpack_metadata, char *mpname, int current_recursion_level, struct SS_object *ss );
@@ -118,12 +121,6 @@ static unsigned char b64[256]={
         128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128,  128 \
 };
 
-typedef struct {
-    size_t size;
-    size_t capacity;
-    MIME_element** array;
-} dynamic_array;
-
 struct MIME_globals {
     int header_defect_count;
     int filecount;
@@ -174,28 +171,10 @@ struct MIME_globals {
     //      wise, any consequent parsing of sub-message bodies
     //      will result in the clobbering of the hinfo struct
     char subject[_MIME_STRLEN_MAX];
-
-    int mime_count;
-    dynamic_array* mime_arr;
 };
 
 static struct MIME_globals glb;
 static char scratch[1024];
-
-/* Dynamic array support*/
-#define INITIAL_SIZE 8
-
-// function prototypes
-//  array container functions
-void arrayInit(dynamic_array** arr_ptr);
-void freeArray(dynamic_array* container);
-
-// Basic Operation functions
-void insertItem(dynamic_array* container, MIME_element* item);
-void updateItem(dynamic_array* container, int i, MIME_element* item);
-int getItem(dynamic_array* container, int i);
-void deleteItem(dynamic_array* container, int i);
-void printArray(dynamic_array* container);
 
 /*-----------------------------------------------------------------\
   Function Name : MIME_version
@@ -1234,49 +1213,7 @@ int MIME_decode_OLE( RIPMIME_output *unpack_metadata, struct MIMEH_header_info *
 }
 #endif
 
-MIME_element* MIME_element_add_with_path (char* fullpath, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo)
-{
-    MIME_element *cur = malloc(sizeof(MIME_element));
-    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:start\n",FL);
 
-    insertItem(glb.mime_arr, cur);
-    cur->hinfo = hinfo;
-    cur->id = glb.mime_count++;
-    cur->fullpath = fullpath;
-
-    cur->f = fopen(cur->fullpath,"wb");
-    if (cur->f == NULL) {
-        LOGGER_log("%s:%d:%s:ERROR: cannot open %s for writing",FL,cur->fullpath);
-        return cur;
-    }
-
-    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding [encoding=%d] to %s\n",FL, hinfo->content_transfer_encoding, cur->fullpath);
-
-    if (unpack_metadata != NULL && unpack_metadata->unpack_mode == RIPMIME_UNPACK_MODE_LIST_FILES && cur->f != NULL) {
-        fprintf (stdout, "%d|%d|%d|%d|%s|%s\n", glb.mime_count, glb.attachment_count, glb.filecount, hinfo->current_recursion_level, hinfo->content_type_string, hinfo->filename);
-    }
-    return cur;
-}
-
-MIME_element* MIME_element_add (RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo)
-{
-    int fullpath_len = strlen(unpack_metadata->dir) + strlen(hinfo->filename) + 3 * sizeof(char);
-    char *fullpath = (char*)malloc(fullpath_len);
-
-    snprintf(fullpath,fullpath_len,"%s/%s",unpack_metadata->dir,hinfo->filename);
-    return MIME_element_add_with_path(fullpath, unpack_metadata, hinfo);
-}
-
-void MIME_element_remove (MIME_element* cur)
-{
-    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:start\n",FL);
-
-    if (cur->f != NULL) {
-        fclose(cur->f);
-    }
-    free(cur->fullpath);
-    free(cur);
-}
 
 /*------------------------------------------------------------------------
 Procedure:     MIME_decode_raw ID:1
@@ -1304,7 +1241,7 @@ int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIME
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Start\n",FL);
 
-    cur_mime = MIME_element_add (unpack_metadata, hinfo);
+    cur_mime = MIME_element_add (unpack_metadata, hinfo, glb.attachment_count, glb.filecount);
 
     while ((readcount=FFGET_raw(f, (unsigned char *) buffer,bufsize)) > 0)
     {
@@ -1404,7 +1341,7 @@ int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIM
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding TEXT [encoding=%d] to %s\n",FL, hinfo->content_transfer_encoding, hinfo->filename);
 
-    cur_mime = MIME_element_add (unpack_metadata, hinfo);
+    cur_mime = MIME_element_add (unpack_metadata, hinfo, glb.attachment_count, glb.filecount);
 
     if (!f)
     {
@@ -1574,7 +1511,7 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: attempting to decode '%s'", FL, hinfo->filename);
 
-    cur_mime = MIME_element_add (unpack_metadata, hinfo);
+    cur_mime = MIME_element_add (unpack_metadata, hinfo, glb.attachment_count, glb.filecount);
     if (cur_mime->f == NULL)
     {
         return -1;
@@ -2116,8 +2053,7 @@ void MIME_init( void )
 
     glb.subject[0]='\0';
 
-    glb.mime_count = 0;
-    arrayInit(&(glb.mime_arr));
+    all_MIME_elements_init();
 }
 
 /*-----------------------------------------------------------------\
@@ -3330,101 +3266,9 @@ void MIME_close( void )
 {
     if (MIME_DNORMAL) {
         LOGGER_log("%s:%d:%s: start.",FL);
-        printArray(glb.mime_arr);
+        printArray(all_MIME_elements.mime_arr);
     }
 
-    freeArray(glb.mime_arr);
+    freeArray(all_MIME_elements.mime_arr);
 }
 
-//------Dynamic array function definitions------
-// Array initialization
-void arrayInit(dynamic_array** arr_ptr)
-{
-    dynamic_array *container;
-    container = (dynamic_array*)malloc(sizeof(dynamic_array));
-    if(!container) {
-        printf("Memory Allocation Failed\n");
-        exit(0);
-    }
-
-    container->size = 0;
-    container->capacity = INITIAL_SIZE;
-    container->array = (MIME_element **)malloc(INITIAL_SIZE * sizeof(MIME_element*));
-    if (!container->array){
-        printf("Memory Allocation Failed\n");
-        exit(0);
-    }
-
-    *arr_ptr = container;
-}
-
-//  Insertion Operation
-void insertItem(dynamic_array* container, MIME_element* item)
-{
-    if (container->size == container->capacity) {
-        MIME_element **temp = container->array;
-        container->capacity <<= 1;
-        container->array = realloc(container->array, container->capacity * sizeof(MIME_element*));
-        if(!container->array) {
-            printf("Out of Memory\n");
-            container->array = temp;
-            return;
-        }
-    }
-    container->array[container->size++] = item;
-}
-
-// Retrieve Item at Particular Index
-int getItem(dynamic_array* container, int index)
-{
-    if(index >= container->size) {
-        printf("Index Out of Bounds\n");
-        return -1;
-    }
-    return container->array[index];
-}
-
-// Update Operation
-void updateItem(dynamic_array* container, int index, MIME_element* item)
-{
-    if (index >= container->size) {
-        printf("Index Out of Bounds\n");
-        return;
-    }
-    container->array[index] = item;
-}
-
-// Delete Item from Particular Index
-void deleteItem(dynamic_array* container, int index)
-{
-    if(index >= container->size) {
-        printf("Index Out of Bounds\n");
-        return;
-    }
-
-    for (int i = index; i < container->size; i++) {
-        container->array[i] = container->array[i + 1];
-    }
-    container->size--;
-}
-
-// Array Traversal
-void printArray(dynamic_array* container)
-{
-    printf("Array elements: ");
-    for (int i = 0; i < container->size; i++) {
-        printf("%p ", container->array[i]);
-    }
-    printf("\nSize: ");
-    printf("%lu", container->size);
-    printf("\nCapacity: ");
-    printf("%lu\n", container->capacity);
-}
-
-// Freeing the memory allocated to the array
-void freeArray(dynamic_array* container)
-{
-    free(container->array);
-    free(container);
-}
-/*----------END OF MIME.c------------*/

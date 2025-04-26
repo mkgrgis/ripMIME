@@ -167,9 +167,6 @@ struct MIMEH_email_info {
 #endif
 
 
-
-
-
 int MIMEH_version(void);
 
 int MIMEH_init( void );

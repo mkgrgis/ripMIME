@@ -56,20 +56,6 @@
 /* status return codes */
 #define MIME_STATUS_ZERO_FILE 100
 
-/* unpack modes */
-#define RIPMIME_UNPACK_MODE_TO_DIRECTORY 0
-#define RIPMIME_UNPACK_MODE_COUNT_FILES 1
-#define RIPMIME_UNPACK_MODE_LIST_FILES 2
-
-struct mime_output
-{
-    char *dir;
-    int unpack_mode;
-    // int fragment_number; will be used later
-};
-
-typedef struct mime_output RIPMIME_output;
-
 int MIME_version( void );
 size_t MIME_read_raw( char *src_mpname, char *dest_mpname, size_t rw_buffer_size );
 int MIME_read( char *mpname ); /* returns filesize in KB */
@@ -129,19 +115,5 @@ char *MIME_get_subject( void );
 void MIME_init( void );
 void MIME_close( void );
 int MIME_set_tmpdir( char *tmpdir );
-
-#include "strstack.h"
-#include "mime_headers.h"
-
-typedef struct {
-    struct MIMEH_header_info *hinfo;
-    int id;
-    char* fullpath;
-    FILE* f;
-    int result;
-} MIME_element;
-
-MIME_element* MIME_element_add_with_path (char* fullpath, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo);
-void MIME_element_remove (MIME_element* cur);
 
 #endif

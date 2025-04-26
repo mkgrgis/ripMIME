@@ -19,6 +19,7 @@ The biggest issue is that the interfaces to the decoding functions are too speci
 #include "pldstr.h"
 #include "ffget.h"
 #include "filename-filters.h"
+#include "mime_element.h"
 
 #include "uuencode.h"
 
@@ -502,7 +503,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 			snprintf(fullpath, sizeof(fullpath), "%s/%s", unpack_metadata->dir, bp );
 			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Filename = (%s)\n", FL, fullpath);
 
-			mime_el = MIME_element_add_with_path (fullpath, unpack_metadata, hinfo);
+			mime_el = MIME_element_add_with_path (fullpath, unpack_metadata, hinfo, 1, 1);
 
 			// Allocate the write buffer.  By using the write buffer we gain an additional 10% in performance
 			// due to the lack of function call (fwrite) overheads
@@ -605,8 +606,8 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 
 			if ((mime_el->f != NULL)&&(wbcount > 0))
 			{
-				size_t bc;
-				bc = fwrite(writebuffer, 1, wbcount, mime_el->f);
+				size_t bc = fwrite(writebuffer, 1, wbcount, mime_el->f);
+
 				if (bc != wbcount) {
 					LOGGER_log("%s:%d:ERROR: Attempted to write %ld bytes, only wrote %ld\n", FL, wbcount, bc);
 				}

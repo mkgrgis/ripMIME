@@ -23,6 +23,7 @@
 #include "buildcodes.h"
 #include "logger.h"
 #include "ffget.h"
+#include "mime_element.h"
 #include "mime.h"
 #include "strstack.h"
 #include "mime_headers.h"

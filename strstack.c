@@ -1,3 +1,5 @@
+/* STRING STACK IMPLEMEMNTATION */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,9 +20,9 @@
 /*-----------------------------------------------------------------\
  Function Name	: SS_init
  Returns Type	: int
- 	----Parameter List
+	----Parameter List
 	1. void ,
- 	------------------
+	------------------
  Exit Codes	:
  Side Effects	:
 --------------------------------------------------------------------
@@ -43,9 +45,9 @@ int SS_init( struct SS_object *ss )
 /*-----------------------------------------------------------------\
  Function Name	: SS_set_verbose
  Returns Type	: int
- 	----Parameter List
+	----Parameter List
 	1. int level ,
- 	------------------
+	------------------
  Exit Codes	:
  Side Effects	:
 --------------------------------------------------------------------
@@ -166,9 +168,7 @@ int SS_dump( struct SS_object *ss )
 \------------------------------------------------------------------*/
 int SS_push( struct SS_object *ss, char *data, size_t data_length )
 {
-
 	struct SS_node *node = malloc(sizeof(struct SS_node));
-
 
 	if (node)
 	{
@@ -191,9 +191,9 @@ int SS_push( struct SS_object *ss, char *data, size_t data_length )
 /*-----------------------------------------------------------------\
  Function Name	: *SS_pop
  Returns Type	: char
- 	----Parameter List
+	----Parameter List
 	1. void ,
- 	------------------
+	------------------
  Exit Codes	:
  Side Effects	:
 --------------------------------------------------------------------
@@ -205,7 +205,6 @@ int SS_push( struct SS_object *ss, char *data, size_t data_length )
 \------------------------------------------------------------------*/
 char *SS_pop( struct SS_object *ss )
 {
-
 	struct SS_node *node = ss->stringstack;
 
 	if ((ss->stringstack)&&(ss->count > 0))
@@ -223,9 +222,9 @@ char *SS_pop( struct SS_object *ss )
 /*-----------------------------------------------------------------\
  Function Name	: *SS_top
  Returns Type	: char
- 	----Parameter List
+	----Parameter List
 	1. void ,
- 	------------------
+	------------------
  Exit Codes	:
  Side Effects	:
 --------------------------------------------------------------------
@@ -237,7 +236,6 @@ char *SS_pop( struct SS_object *ss )
 \------------------------------------------------------------------*/
 char *SS_top( struct SS_object *ss )
 {
-
 	if (ss->stringstack)
 	{
 		return ss->stringstack->data;
@@ -248,9 +246,9 @@ char *SS_top( struct SS_object *ss )
 /*-----------------------------------------------------------------\
  Function Name	: SS_count
  Returns Type	: int
- 	----Parameter List
+	----Parameter List
 	1. void ,
- 	------------------
+	------------------
  Exit Codes	:
  Side Effects	:
 --------------------------------------------------------------------
