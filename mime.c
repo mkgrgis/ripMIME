@@ -75,12 +75,12 @@ int MIME_handle_rfc822( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
 #define FL __FILE__,__LINE__
 #endif
 
-#define _ENC_UNKNOWN 0
-#define _ENC_BASE64 1
-#define _ENC_PLAINTEXT 2
-#define _ENC_QUOTED 3
-#define _ENC_EMBEDDED 4
-#define _ENC_NOFILE -1
+#define _ENC_UNKNOWN			0
+#define _ENC_BASE64				1
+#define _ENC_PLAINTEXT			2
+#define _ENC_QUOTED				3
+#define _ENC_EMBEDDED			4
+#define _ENC_NOFILE				-1
 #define _MIME_CHARS_PER_LINE 32
 #define _MIME_MAX_CHARS_PER_LINE 76
 #define _RECURSION_LEVEL_DEFAULT 20
@@ -1249,10 +1249,7 @@ int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIME
 
         if ((!file_has_uuencode)&&(UUENCODE_is_uuencode_header( buffer )))
         {
-            if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: UUENCODED is YES (buffer=[%p]\n",FL,__func__,buffer);
-
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: File contains UUENCODED data(%s)\n",FL,__func__,buffer);
-
             file_has_uuencode = 1;
         }
 
@@ -1268,22 +1265,17 @@ int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIME
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Completed reading RAW data\n",FL,__func__);
     free(buffer);
-    MIME_element_remove(cur_mime);
-    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Closed file and free'd buffer\n",FL,__func__);
+
     // If there was UUEncoded portions [potentially] in the email, the
     // try to extract them using the MIME_decode_uu()
     if (file_has_uuencode)
     {
-        char full_decode_path[512];
-        FILE *fuue = NULL;
         FFGET_FILE * ffg = NULL;
 
-        snprintf(full_decode_path,sizeof(full_decode_path),"%s/%s",unpack_metadata->dir,hinfo->filename);
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UUencoded data\n",FL,__func__);
         if ( hinfo->content_transfer_encoding == _CTRANS_ENCODING_UUENCODE ) decode_entire_file = 0;
-
-        fuue = UUENCODE_make_file_obj (full_decode_path);
-        ffg = UUENCODE_make_sourcestream(fuue);
+      
+        ffg = UUENCODE_make_sourcestream(cur_mime->f); /* fseek to begin is here */
         result = UUENCODE_decode_uu(ffg , hinfo->uudec_name, decode_entire_file, keep, unpack_metadata, hinfo );
         if (result == -1)
         {
@@ -1318,6 +1310,8 @@ int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIME
             else LOGGER_log("%s:%d:%s:WARNING: hinfo has been clobbered.\n",FL,__func__);
         }
     }
+    MIME_element_remove(cur_mime);
+    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Closed file and free'd buffer\n",FL,__func__);
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: End[result = %d]\n",FL,__func__,result);
     return result;
