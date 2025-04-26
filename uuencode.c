@@ -20,8 +20,8 @@ The biggest issue is that the interfaces to the decoding functions are too speci
 #include "ffget.h"
 #include "filename-filters.h"
 #include "strstack.h"
-#include "mime_headers.h"
 #include "mime_element.h"
+#include "mime_headers.h"
 
 #include "uuencode.h"
 

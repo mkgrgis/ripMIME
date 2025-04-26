@@ -741,8 +741,8 @@ int MIMEH_save_doubleCR( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct 
     if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIME_save_doubleCR:DEBUG: Saving DoubleCR header: %s\n", FL,glb.doubleCRname);
     while (1)
     {
-        c = FFGET_fgetc(cur_mime->f);
-        fprintf(fo,"%c",c);
+        c = FFGET_fgetc(f);
+        fprintf(cur_mime->f,"%c",c);
         if ((c == EOF)||(c == '\n'))
         {
             break;
@@ -1262,8 +1262,6 @@ int MIMEH_read_headers( struct MIMEH_header_info *hinfo, FFGET_FILE *f, RIPMIME_
     return result;
 }
 
-
-
 /*------------------------------------------------------------------------
 Procedure:     MIMEH_display_info ID:1
 Purpose:       DEBUGGING - Displays the values of the hinfo structure to
@@ -1294,7 +1292,6 @@ int MIMEH_display_info( struct MIMEH_header_info *hinfo )
         fflush(stdout);
     }
     return 0;
-
 }
 
 /*-----------------------------------------------------------------\
@@ -1343,10 +1340,7 @@ int MIMEH_decode_multivalue_language_string( char *input )
     }
 
     DMIMEH LOGGER_log("%s:%d:MIMEH_decode_multivalue_language_string:DEBUG: Output = '%s'",FL,q);
-
-
     return 0;
-
 }
 
 /*-----------------------------------------------------------------\
@@ -1398,7 +1392,7 @@ int MIMEH_recompose_multivalue( struct MIMEH_header_info *hinfo, char *header_na
     {
         char *q;
         char *buffer_start;
-		  int is_quoted = 0;
+        int is_quoted = 0;
 
         // Setup our buffer insertion point for what ever new data we extract
         buffer_start = buffer +strlen(buffer);
@@ -1497,7 +1491,6 @@ int MIMEH_recompose_multivalue( struct MIMEH_header_info *hinfo, char *header_na
     DMIMEH LOGGER_log("%s:%d:MIMEH_recompose_multivalue:DEBUG: End point set to: [%d] '%s'",FL, (*data_end_point -header_value), *data_end_point);
     return result;
 }
-
 
 /*-----------------------------------------------------------------\
   Function Name : MIMEH_parse_header_parameter
@@ -1792,14 +1785,7 @@ int MIMEH_parse_header_parameter( struct MIMEH_header_info *hinfo,  char *data, 
     if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_header_parameter:DEBUG: [return=%d] Done seeking for '%s' data_end_point=%p (from %p)",FL, return_value, searchstr, *data_end_point, data);
 
     return return_value;
-
 }
-
-
-
-
-
-
 
 /*-----------------------------------------------------------------\
   Function Name : MIMEH_is_valid_header_prefix
@@ -1852,8 +1838,6 @@ int MIMEH_is_valid_header_prefix( char *data, char *prefix_name )
     return 1;
 }
 
-
-
 /*-----------------------------------------------------------------\
   Function Name : MIMEH_parse_contenttype_linear
   Returns Type  : int
@@ -1896,10 +1880,7 @@ int MIMEH_parse_contenttype_linear_EXPERIMENT( char *header_name, char *header_v
         //      if (strncasecmp(chv, "boundary"
 
     }
-
-
     return 0;
-
 }
 
 /*-----------------------------------------------------------------\
@@ -1921,7 +1902,6 @@ Changes:
 \------------------------------------------------------------------*/
 int MIMEH_parse_contenttype( char *header_name, char *header_value, struct MIMEH_header_info *hinfo )
 {
-
     int return_value;
     char *p, *q;
     char *hv = strdup( header_value );
@@ -2180,7 +2160,6 @@ int MIMEH_parse_contentlocation( char *header_name, char *header_value, struct M
             snprintf(hinfo->filename, sizeof(hinfo->filename),"%s",p);
             FNFILTER_filter(hinfo->filename, _MIMEH_FILENAMELEN_MAX);
             SS_push(&(hinfo->ss_filenames), hinfo->filename, strlen(hinfo->filename));
-
         }
     }
     return 0;
@@ -2858,7 +2837,6 @@ int MIMEH_headers_clearcount( struct MIMEH_header_info *hinfo ) {
     hinfo->lf_count = 0;
     hinfo->crcr_count = 0;
     return 0;
-
 }
 
 /*-----------------------------------------------------------------\
@@ -2976,8 +2954,6 @@ int MIMEH_headers_cleanup( void )
     return 0;
 }
 
-
-
 /*-----------------------------------------------------------------\
   Function Name : MIMEH_parse_headers
   Returns Type  : int
@@ -3074,7 +3050,6 @@ Changes:
 \------------------------------------------------------------------*/
 int MIMEH_get_defect_count( struct MIMEH_header_info *hinfo )
 {
-
     return hinfo->header_defect_count;
 }
 
