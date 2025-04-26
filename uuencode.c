@@ -45,19 +45,19 @@ The biggest issue is that the interfaces to the decoding functions are too speci
 static unsigned char uudec[256]={
 		32,   33,   34,   35,   36,   37,   38,   39,   40,   41,   42,   43,   44,   45,   46,   47,\
 		48,   49,   50,   51,   52,   53,   54,   55,   56,   57,   58,   59,   60,   61,   62,   63,\
-		0,    1,    2,    3,    4,    5,    6,    7,    8,    9,   10,   11,   12,   13,   14,   15,\
+		0,    1,    2,    3,    4,    5,    6,    7,    8,    9,    10,   11,   12,   13,   14,   15,\
 		16,   17,   18,   19,   20,   21,   22,   23,   24,   25,   26,   27,   28,   29,   30,   31,\
 		32,   33,   34,   35,   36,   37,   38,   39,   40,   41,   42,   43,   44,   45,   46,   47,\
 		48,   49,   50,   51,   52,   53,   54,   55,   56,   57,   58,   59,   60,   61,   62,   63,\
-		0,    1,    2,    3,    4,    5,    6,    7,    8,    9,   10,   11,   12,   13,   14,   15,\
+		0,    1,    2,    3,    4,    5,    6,    7,    8,    9,    10,   11,   12,   13,   14,   15,\
 		16,   17,   18,   19,   20,   21,   22,   23,   24,   25,   26,   27,   28,   29,   30,   31,\
 		32,   33,   34,   35,   36,   37,   38,   39,   40,   41,   42,   43,   44,   45,   46,   47,\
 		48,   49,   50,   51,   52,   53,   54,   55,   56,   57,   58,   59,   60,   61,   62,   63,\
-		0,    1,    2,    3,    4,    5,    6,    7,    8,    9,   10,   11,   12,   13,   14,   15,\
+		0,    1,    2,    3,    4,    5,    6,    7,    8,    9,    10,   11,   12,   13,   14,   15,\
 		16,   17,   18,   19,   20,   21,   22,   23,   24,   25,   26,   27,   28,   29,   30,   31,\
 		32,   33,   34,   35,   36,   37,   38,   39,   40,   41,   42,   43,   44,   45,   46,   47,\
 		48,   49,   50,   51,   52,   53,   54,   55,   56,   57,   58,   59,   60,   61,   62,   63,\
-		0,    1,    2,    3,    4,    5,    6,    7,    8,    9,   10,   11,   12,   13,   14,   15,\
+		0,    1,    2,    3,    4,    5,    6,    7,    8,    9,    10,   11,   12,   13,   14,   15,\
 		16,   17,   18,   19,   20,   21,   22,   23,   24,   25,   26,   27,   28,   29,   30,   31 \
 };
 
@@ -68,6 +68,7 @@ struct UUENCODE_globals {
 	int decode;
 	int doubleCR_mode;
 	int (*filename_decoded_report)(char *, char *);	// Pointer to our filename reporting function
+	FFGET_FILE ffinf;
 };
 
 static struct UUENCODE_globals glb;
@@ -336,17 +337,40 @@ int UUENCODE_is_diskfile_uuencoded( char *fname )
 	return result;
 }
 
+FILE * UUENCODE_make_file_obj (char *input_filename)
+{
+	FILE *inf = fopen(input_filename,"r");
+	if (!inf)
+	{
+		LOGGER_log("%s:%d:UUENCODE_decode_uu:ERROR: Cannot open file '%s' for reading (%s)", FL, input_filename, strerror(errno));
+		uuencode_error = UUENCODE_STATUS_CANNOT_OPEN_FILE;
+		return NULL;
+	}
+	return inf;
+}
+
+FFGET_FILE * UUENCODE_make_sourcestream( FILE *f)
+{
+	if (f == NULL)
+		return NULL;
+	fseek(f, 0, SEEK_SET);
+	FFGET_setstream(&(glb.ffinf), f);
+	FFGET_set_watch_SDL( glb.doubleCR_mode );
+
+	if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Creation done. [FFGET-FILE=%p, FILE=%p]\n", FL, &(glb.ffinf), f);
+	return &(glb.ffinf);
+}
+
 /*-----------------------------------------------------------------\
   Function Name	: UUENCODE_decode_uu
   Returns Type	: int
   ----Parameter List
-  1. FFGET_FILE *f,				Source Data Stream
-  2.  char *input_filename,	The fully pathed input filename, containing UU data
-  3.  char *out_filename,		Pointer to a buffer where we will write the filename of the UU data
-  4.  int decode_whole_file, 0 == only first segment, >0 == all
-  5.  int keep ,					Keep the files we create, don't delete
-  6.  unpack file metadata
-  7.  related MIME headers
+  1.  FFGET_FILE *f,				Source Data Stream
+  2.  char *out_filename,		Pointer to a buffer where we will write the filename of the UU data
+  3.  int decode_whole_file, 0 == only first segment, >0 == all
+  4.  int keep ,					Keep the files we create, don't delete
+  5.  unpack file metadata
+  6.  related MIME headers
   ------------------
   Exit Codes	:		Returns the number of attachments decoded in the data
   Side Effects	:
@@ -357,7 +381,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename, int decode_whole_file, int keep, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo )
+int UUENCODE_decode_uu( FFGET_FILE *f, char *out_filename, int decode_whole_file, int keep, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo )
 {
 	int filename_found = 0;
 	char buf[ UUENCODE_STRLEN_MAX ];
@@ -370,41 +394,13 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 	int loop = 0;
 	int buflen = 0;
 	int filecount = 0;
-	FFGET_FILE ffinf;	// Local static FFGET struct used if *f is  NULL
-	FFGET_FILE *finf;	// Points to either *f or &ffinf
-	FILE *inf = NULL;
+
 	int output_filename_supplied = (out_filename != NULL) && (out_filename[0] != '\0');
 	int start_found = 0;
 
 	bp = buf;
 
-	if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Starting.(input=%s,output=%s)\n", FL, input_filename,out_filename );
-
-
-	// If no FFGET_FILE param is passed to us directly, then we must create out own.
-	if (!f)
-	{
-		if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: NULL FFGET source stream given to us, create our own.\n",FL);
-
-		if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Full INPUT file path set as '%s'\n", FL, input_filename);
-
-		inf = fopen(input_filename,"r");
-		if (!inf)
-		{
-			LOGGER_log("%s:%d:UUENCODE_decode_uu:ERROR: Cannot open file '%s' for reading (%s)", FL, input_filename, strerror(errno));
-			uuencode_error = UUENCODE_STATUS_CANNOT_OPEN_FILE;
-			return -1;
-		}
-
-		FFGET_setstream(&ffinf, inf);
-		FFGET_set_watch_SDL( glb.doubleCR_mode );
-		finf = &ffinf;
-
-		if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Creation done. [FFGET-FILE=%p, FILE=%p]\n", FL, finf, inf);
-	} else {
-		if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: File handle already exists to read from, using",FL);
-		finf = f;
-	}
+	if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Starting.(input=%s,output=%s)\n", FL, hinfo->filename,out_filename );
 
 	writebuffer = malloc( UUENCODE_WRITE_BUFFER_SIZE *sizeof(unsigned char));
 	if (!writebuffer)
@@ -418,14 +414,14 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 		wbcount = 0;
 	}
 
-	if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Beginning.(%s)\n",FL,input_filename);
+	if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Beginning.(%s)\n",FL,hinfo->filename);
 
-	while (!FFGET_feof(finf))
+	while (!FFGET_feof(f))
 	{
 		filename_found = 0;
 		// First lets locate the BEGIN line of this UUDECODE file
 		{
-			while (FFGET_fgets(buf, sizeof(buf), finf))
+			while (FFGET_fgets(buf, sizeof(buf), f))
 			{
 				if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: BUFFER: \n%s\n", FL, buf);
 
@@ -458,7 +454,6 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 					{
 						LOGGER_log("%s:%d:UUENCODE_decode_uu:WARNING: unable to obtain filename from UUencoded text file header", FL);
 						if (writebuffer) free(writebuffer);
-						fclose(inf);
 						uuencode_error = UUENCODE_STATUS_CANNOT_FIND_FILENAME;
 						return -1;
 					}
@@ -511,11 +506,11 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 			while (cur_mime->f)
 			{
 				// for each input line
-				FFGET_fgets(buf, sizeof(buf), finf);
+				FFGET_fgets(buf, sizeof(buf), f);
 				if (UUENCODE_DPEDANTIC) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Read line:\n%s",FL,buf);
-				if (FFGET_feof(finf) != 0)
+				if (FFGET_feof(f) != 0)
 				{
-					if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:WARNING: Short file (%s)\n",FL, input_filename);
+					if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:WARNING: Short file (%s)\n",FL, hinfo->filename);
 					if (writebuffer != NULL) free(writebuffer);
 					uuencode_error = UUENCODE_STATUS_SHORT_FILE;
 					return -1;
@@ -616,9 +611,9 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 			{
 				if (glb.filename_decoded_report == NULL)
 				{
-					LOGGER_log("Decoded: %s\n", input_filename);
+					LOGGER_log("Decoded: %s\n", hinfo->filename);
 				} else {
-					glb.filename_decoded_report( input_filename, (glb.verbosity_contenttype>0?"uuencoded":NULL) );
+					glb.filename_decoded_report( hinfo->filename, (glb.verbosity_contenttype>0?"uuencoded":NULL) );
 				}
 			}
 
@@ -642,8 +637,6 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 	if (writebuffer) free(writebuffer);
 
 	if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Completed\n",FL);
-
-	if (inf) fclose(inf);
 
 	return filecount;
 }

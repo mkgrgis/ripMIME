@@ -1275,12 +1275,16 @@ int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIME
     if (file_has_uuencode)
     {
         char full_decode_path[512];
+        FILE *fuue = NULL;
+        FFGET_FILE * ffg = NULL;
+
         snprintf(full_decode_path,sizeof(full_decode_path),"%s/%s",unpack_metadata->dir,hinfo->filename);
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UUencoded data\n",FL,__func__);
         if ( hinfo->content_transfer_encoding == _CTRANS_ENCODING_UUENCODE ) decode_entire_file = 0;
 
-        //result = UUENCODE_decode_uu(NULL, hinfo->filename, hinfo->uudec_name, decode_entire_file, keep );
-        result = UUENCODE_decode_uu(NULL, full_decode_path, hinfo->uudec_name, decode_entire_file, keep, unpack_metadata, hinfo );
+        fuue = UUENCODE_make_file_obj (full_decode_path);
+        ffg = UUENCODE_make_sourcestream(fuue);
+        result = UUENCODE_decode_uu(ffg , hinfo->uudec_name, decode_entire_file, keep, unpack_metadata, hinfo );
         if (result == -1)
         {
             switch (uuencode_error) {
@@ -1417,6 +1421,8 @@ int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIM
     //
     if (file_has_uuencode)
     {
+        FILE *fuue = NULL;
+        FFGET_FILE * ffg = NULL;
         char ffname[256];
         snprintf(ffname,256,"%s/%s", unpack_metadata->dir, hinfo->filename);
         // PLD-20040627-1212
@@ -1433,8 +1439,11 @@ int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIM
         //      NOTE - this function returns the NUMBER of attachments it decoded in the return value!  Don't
         //          propergate this value unintentionally to parent functions (ie, if you were thinking it was
         //          an error-status return value
+        fuue = UUENCODE_make_file_obj (ffname);
+        ffg = UUENCODE_make_sourcestream(fuue);
 
-        result = UUENCODE_decode_uu( NULL, ffname, hinfo->uudec_name, 1, keep, unpack_metadata, hinfo );
+        result = UUENCODE_decode_uu( ffg, hinfo->uudec_name, 1, keep, unpack_metadata, hinfo );
+        fclose(fuue);
         if (result == -1)
         {
             switch (uuencode_error) {
@@ -1842,9 +1851,15 @@ int MIME_doubleCR_decode( char *filename, RIPMIME_output *unpack_metadata, struc
     }
     else if (UUENCODE_is_diskfile_uuencoded(h.filename))
     {
+        FILE *fuue = NULL;
+        FFGET_FILE * ffg = NULL;
+
         if (MIME_VERBOSE) LOGGER_log("Attempting to decode UUENCODED attachment from Double-CR delimeted attachment '%s'\n",filename);
+        fuue = UUENCODE_make_file_obj (filename);
+        ffg = UUENCODE_make_sourcestream(fuue);
         UUENCODE_set_doubleCR_mode(1);
-        result = UUENCODE_decode_uu(NULL, filename, h.uudec_name, 1, 1, unpack_metadata, hinfo );
+        result = UUENCODE_decode_uu(ffg, h.uudec_name, 1, 1, unpack_metadata, hinfo );
+        fclose(fuue);
         UUENCODE_set_doubleCR_mode(0);
         glb.attachment_count += result;
         result = 0;
@@ -2310,7 +2325,7 @@ int MIME_decode_encoding( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UUENCODED format\n",FL,__func__);
             // Added as a test - remove if we can get this to work in a better way
             snprintf(hinfo->uudec_name,sizeof(hinfo->uudec_name),"%s",hinfo->filename);
-            result = UUENCODE_decode_uu(f, hinfo->filename, hinfo->uudec_name, 0, keep, unpack_metadata, hinfo );
+            result = UUENCODE_decode_uu(f, hinfo->uudec_name, 0, keep, unpack_metadata, hinfo );
             glb.attachment_count += result;
             // Because this is a file-count, it's not really an 'error result' as such, so, set the
             //      return code back to 0!
