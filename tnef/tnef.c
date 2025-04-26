@@ -75,7 +75,6 @@ struct TNEF_globals {
 	uint8 *tnef_limit;
 
 	int (*filename_decoded_report)(char *, char *);	// Pointer to our filename reporting function
-
 };
 
 static struct TNEF_globals TNEF_glb;
@@ -118,7 +117,6 @@ int TNEF_set_verbosity( int level )
 	return TNEF_glb.verbose;
 }
 
-
 /*-----------------------------------------------------------------\
   Function Name	: TNEF_set_verbosity_contenttype
   Returns Type	: int
@@ -159,11 +157,8 @@ Changes:
 int TNEF_set_filename_report_fn( int (*ptr_to_fn)(char *, char *) )
 {
 	TNEF_glb.filename_decoded_report = ptr_to_fn;
-
 	return 0;
 }
-
-
 
 /*------------------------------------------------------------------------
 Procedure:     TNEF_set_debug ID:1
@@ -178,10 +173,6 @@ int TNEF_set_debug( int level )
 	TNEF_set_verbosity( level );
 	return TNEF_glb.debug;
 }
-
-
-
-
 
 /* Some systems don't like to read unaligned data */
 /*------------------------------------------------------------------------
@@ -241,8 +232,6 @@ int read_16( uint16 *value, uint8 *tsp)
 	return 0;
 }
 
-
-
 /*------------------------------------------------------------------------
 Procedure:     make_string ID:1
 Purpose:
@@ -255,18 +244,8 @@ char *make_string(uint8 *tsp, int size)
 	static char s[256] = "";
 
 	snprintf(s,sizeof(s),"%s",tsp);
-
-	/** 20041106-0929:PLD: Remove this ugly old code and use snprintf() instead 
-	  int len = (size>sizeof(s)-1) ? sizeof(s)-1 : size;
-
-	  strncpy(s,tsp, len);
-	  s[len] = '\0';
-	 **/
-
 	return s;
 }
-
-
 
 /*------------------------------------------------------------------------
 Procedure:     save_attach_data ID:1
@@ -378,12 +357,8 @@ int handle_props(uint8 *tsp, char * file_dir)
 		}
 		x++;
 	}
-
 	return 0;
 }
-
-
-
 
 /*------------------------------------------------------------------------
 Procedure:     default_handler ID:1
@@ -418,11 +393,7 @@ int default_handler(uint32 attribute, uint8 *tsp, uint32 size)
 			break;
 	}
 	return 0;
-
 }
-
-
-
 
 /*------------------------------------------------------------------------
 Procedure:     read_attribute ID:1
@@ -628,9 +599,6 @@ int read_attribute(uint8 *tsp, char *file_dir)
 	return bytes;
 
 }
-
-
-
 
 /*------------------------------------------------------------------------
 Procedure:     decode_tnef ID:1
