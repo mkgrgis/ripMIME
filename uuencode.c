@@ -270,7 +270,7 @@ int UUENCODE_is_uuencode_header( char *line )
 
 		if (fp)
 		{
-			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_is_uuencode_header:DEBUG: PERMISSIONS = %s\n", FL, fp);
+			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: PERMISSIONS = %s\n", FL,__func__, fp);
 
 			if ((atoi(fp) == 0)||(atoi(fp) > 777))   // Maximum is 777, because R+W+X = 7
 			{
@@ -280,7 +280,7 @@ int UUENCODE_is_uuencode_header( char *line )
 
 		}
 		else {
-			if (UUENCODE_DNORMAL)	LOGGER_log("%s:%d:UUENCODE_is_uuencode_header:WARNING: Cannot read permissions for UUENCODED data file (%s)\n", FL, line);
+			if (UUENCODE_DNORMAL)	LOGGER_log("%s:%d:%s:WARNING: Cannot read permissions for UUENCODED data file (%s)\n", FL,__func__, line);
 		}
 	}
 
@@ -296,7 +296,7 @@ int UUENCODE_is_file_uuencoded( FILE *f )
 
 	while ((linecount < limit)&&(fgets(line, sizeof(line), f)))
 	{
-		if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_is_file_uuencoded:DEBUG: Testing line '%s'\n", FL, line);
+		if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Testing line '%s'\n", FL,__func__, line);
 		if (UUENCODE_is_uuencode_header( line ))
 		{
 			result = 1;
@@ -327,7 +327,7 @@ int UUENCODE_is_diskfile_uuencoded( char *fname )
 	f = fopen(fname,"r");
 	if (!f)
 	{
-		LOGGER_log("%s:%d:UUENCODE_is_diskfile_uuencoded:ERROR: cannot open file '%s' for reading (%s)", FL, fname,strerror(errno));
+		LOGGER_log("%s:%d:%s:ERROR: cannot open file '%s' for reading (%s)", FL,__func__, fname,strerror(errno));
 		uuencode_error = UUENCODE_STATUS_CANNOT_OPEN_FILE;
 		return -1;
 	}
@@ -342,7 +342,7 @@ FILE * UUENCODE_make_file_obj (char *input_filename)
 	FILE *inf = fopen(input_filename,"r");
 	if (!inf)
 	{
-		LOGGER_log("%s:%d:UUENCODE_decode_uu:ERROR: Cannot open file '%s' for reading (%s)", FL, input_filename, strerror(errno));
+		LOGGER_log("%s:%d:%s:ERROR: Cannot open file '%s' for reading (%s)", FL,__func__, input_filename, strerror(errno));
 		uuencode_error = UUENCODE_STATUS_CANNOT_OPEN_FILE;
 		return NULL;
 	}
@@ -357,7 +357,7 @@ FFGET_FILE * UUENCODE_make_sourcestream( FILE *f)
 	FFGET_setstream(&(glb.ffinf), f);
 	FFGET_set_watch_SDL( glb.doubleCR_mode );
 
-	if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Creation done. [FFGET-FILE=%p, FILE=%p]\n", FL, &(glb.ffinf), f);
+	if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Creation done. [FFGET-FILE=%p, FILE=%p]\n", FL,__func__, &(glb.ffinf), f);
 	return &(glb.ffinf);
 }
 
@@ -400,12 +400,12 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *out_filename, int decode_whole_file
 
 	bp = buf;
 
-	if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Starting.(input=%s,output=%s)\n", FL, hinfo->filename,out_filename );
+	if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Starting.(input=%s,output=%s)\n", FL,__func__, hinfo->filename,out_filename );
 
 	writebuffer = malloc( UUENCODE_WRITE_BUFFER_SIZE *sizeof(unsigned char));
 	if (!writebuffer)
 	{
-		LOGGER_log("%s:%d:UUENCODE_decode_uu:ERROR: cannot allocate 100K of memory for the write buffer",FL);
+		LOGGER_log("%s:%d:%s:ERROR: cannot allocate 100K of memory for the write buffer",FL,__func__);
 		uuencode_error = UUENCODE_STATUS_CANNOT_ALLOCATE_MEMORY;
 		return -1;
 	}
@@ -414,7 +414,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *out_filename, int decode_whole_file
 		wbcount = 0;
 	}
 
-	if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Beginning.(%s)\n",FL,hinfo->filename);
+	if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Beginning.(%s)\n",FL,__func__,hinfo->filename);
 
 	while (!FFGET_feof(f))
 	{
@@ -423,26 +423,26 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *out_filename, int decode_whole_file
 		{
 			while (FFGET_fgets(buf, sizeof(buf), f))
 			{
-				if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: BUFFER: \n%s\n", FL, buf);
+				if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: BUFFER: \n%s\n", FL,__func__, buf);
 
 				// Check for the presence of 'BEGIN', but make sure it's not followed by a
 				//		colon ( which indicates a VCARD instead of UUENCODE
 
 				if ((strncasecmp(buf,"begin",5)==0)&&(buf[5] !=':')&&(isspace((int)buf[5])))
 				{
-					if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Located BEGIN\n",FL);
+					if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Located BEGIN\n",FL,__func__);
 					// Okay, so the line contains begin at the start, now, lets get the decode details
 					fp = fn = NULL;
 
 					bp = PLD_strtok(&tx, buf, " \n\r\t"); // Get the begin
 
-					if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: BEGIN = '%s'\n", FL, bp);
+					if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: BEGIN = '%s'\n", FL,__func__, bp);
 					if (bp) fp = PLD_strtok(&tx, NULL, " \n\r\t"); // Get the file-permissions
 
-					if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Permissions/Name = '%s'\n", FL, fp);
+					if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Permissions/Name = '%s'\n", FL,__func__, fp);
 					if (fp) fn = PLD_strtok(&tx, NULL, "\n\r"); // Get the file-name
 
-					if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Name = '%s'\n", FL, fn);
+					if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Name = '%s'\n", FL,__func__, fn);
 
 					if (!fn)
 					{
@@ -452,13 +452,13 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *out_filename, int decode_whole_file
 
 					if ((!bp)&&(!f))
 					{
-						LOGGER_log("%s:%d:UUENCODE_decode_uu:WARNING: unable to obtain filename from UUencoded text file header", FL);
+						LOGGER_log("%s:%d:%s:WARNING: unable to obtain filename from UUencoded text file header", FL,__func__);
 						if (writebuffer) free(writebuffer);
 						uuencode_error = UUENCODE_STATUS_CANNOT_FIND_FILENAME;
 						return -1;
 					}
 
-					if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Full path = (%s)\n",FL,bp);
+					if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Full path = (%s)\n",FL,__func__,bp);
 
 					filename_found = 1;
 					break;
@@ -473,7 +473,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *out_filename, int decode_whole_file
 		{
 			filename_found = 1;
 			bp = out_filename;
-			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Output filename set to '%s'",FL, bp);
+			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Output filename set to '%s'",FL,__func__, bp);
 		}
 
 		// If we have a filename, and we have our bp as NON-null, then we shall commence
@@ -483,7 +483,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *out_filename, int decode_whole_file
 		{
 			MIME_element* cur_mime = NULL;
 
-			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Located filename (%s), now decoding.\n", FL, bp);
+			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Located filename (%s), now decoding.\n", FL,__func__, bp);
 
 			// Clean up the file name
 			FNFILTER_filter( bp, 255 ); /* the longest for most of filesystems */
@@ -492,7 +492,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *out_filename, int decode_whole_file
 			if (output_filename_supplied == 0)
 				out_filename = strdup(bp);
 
-			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Filename = (%s)\n", FL, fn);
+			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Filename = (%s)\n", FL,__func__, fn);
 
 			cur_mime = MIME_element_add (NULL, unpack_metadata, fn, hinfo->content_type_string, hinfo->content_transfer_encoding_string, hinfo->name, hinfo->current_recursion_level, 1, filecount);
 
@@ -507,10 +507,10 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *out_filename, int decode_whole_file
 			{
 				// for each input line
 				FFGET_fgets(buf, sizeof(buf), f);
-				if (UUENCODE_DPEDANTIC) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Read line:\n%s",FL,buf);
+				if (UUENCODE_DPEDANTIC) LOGGER_log("%s:%d:%s:DEBUG: Read line:\n%s",FL,__func__,buf);
 				if (FFGET_feof(f) != 0)
 				{
-					if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:WARNING: Short file (%s)\n",FL, hinfo->filename);
+					if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:%s:WARNING: Short file (%s)\n",FL,__func__, hinfo->filename);
 					if (writebuffer != NULL) free(writebuffer);
 					uuencode_error = UUENCODE_STATUS_SHORT_FILE;
 					return -1;
@@ -520,13 +520,13 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *out_filename, int decode_whole_file
 
 				if (strncasecmp(buf,"end",3)==0)
 				{
-					if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: End of UUencoding detected\n",FL);
+					if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: End of UUencoding detected\n",FL,__func__);
 					break;
 				}
 
 				if ( !strpbrk(buf,"\r\n") )
 				{
-					LOGGER_log("%s:%d:UUENCODE_decode_uu:WARNING: Excessive length line\n",FL);
+					LOGGER_log("%s:%d:%s:WARNING: Excessive length line\n",FL,__func__);
 				}
 
 				// The first char of the line indicates how many bytes are to be expected
@@ -569,7 +569,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *out_filename, int decode_whole_file
 						size_t bc;
 						bc = fwrite(writebuffer, 1, wbcount, cur_mime->f);
 						if (bc != wbcount) {
-							LOGGER_log("%s:%d:ERROR: Attempted to write %ld bytes, only wrote %ld\n", FL, wbcount, bc);
+							LOGGER_log("%s:%d:ERROR: Attempted to write %ld bytes, only wrote %ld\n", FL,__func__, wbcount, bc);
 						}
 						wbpos = writebuffer;
 						wbcount = 0;
@@ -599,7 +599,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *out_filename, int decode_whole_file
 				size_t bc = fwrite(writebuffer, 1, wbcount, cur_mime->f);
 
 				if (bc != wbcount) {
-					LOGGER_log("%s:%d:ERROR: Attempted to write %ld bytes, only wrote %ld\n", FL, wbcount, bc);
+					LOGGER_log("%s:%d:ERROR: Attempted to write %ld bytes, only wrote %ld\n", FL,__func__, wbcount, bc);
 				}
 			}
 
@@ -623,10 +623,10 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *out_filename, int decode_whole_file
 		else
 		{
 			out_filename[0] = '\0';
-			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: No FILENAME was found in data...\n",FL);
+			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: No FILENAME was found in data...\n",FL,__func__);
 		}
 
-		if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Segment completed\n",FL);
+		if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Segment completed\n",FL,__func__);
 
 		// If this file was a result of the x-uuencode content encoding, then we need to exit out
 		// as we're reading in the -stream-, and we dont want to carry on reading because we'll
@@ -636,7 +636,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *out_filename, int decode_whole_file
 
 	if (writebuffer) free(writebuffer);
 
-	if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Completed\n",FL);
+	if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Completed\n",FL,__func__);
 
 	return filecount;
 }
