@@ -361,7 +361,6 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 	char buf[ UUENCODE_STRLEN_MAX ];
 	char *bp = buf, *fn, *fp;
 	int n, i, expected;
-	char fullpath[ UUENCODE_STRLEN_MAX ]="";
 	struct PLD_strtok tx;
 	unsigned char *writebuffer = NULL;
 	unsigned char *wbpos;
@@ -385,15 +384,12 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 	{
 		if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: NULL FFGET source stream given to us, create our own.\n",FL);
 
-		// Setup the full source-data file path.
-		snprintf(fullpath, sizeof(fullpath),"%s", input_filename );
+		if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Full INPUT file path set as '%s'\n", FL, input_filename);
 
-		if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Full INPUT file path set as '%s'\n", FL, fullpath);
-
-		inf = fopen(fullpath,"r");
+		inf = fopen(input_filename,"r");
 		if (!inf)
 		{
-			LOGGER_log("%s:%d:UUENCODE_decode_uu:ERROR: Cannot open file '%s' for reading (%s)", FL, fullpath, strerror(errno));
+			LOGGER_log("%s:%d:UUENCODE_decode_uu:ERROR: Cannot open file '%s' for reading (%s)", FL, input_filename, strerror(errno));
 			uuencode_error = UUENCODE_STATUS_CANNOT_OPEN_FILE;
 			return -1;
 		}
@@ -420,7 +416,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 		wbcount = 0;
 	}
 
-	if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Beginning.(%s)\n",FL,fullpath);
+	if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Beginning.(%s)\n",FL,input_filename);
 
 	while (!FFGET_feof(finf))
 	{
@@ -489,6 +485,13 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 		if ((filename_found != 0)&&(bp))
 		{
 			MIME_element* mime_el = NULL;
+            char * fn;
+            int fn_l = strlen(unpack_metadata->dir) + strlen(bp) + sizeof(char) * 2;
+
+            fn = malloc(fn_l);
+            snprintf(fn,fn_l,"%s/%s",unpack_metadata->dir,bp);        
+            
+			
 			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Located filename (%s), now decoding.\n", FL, bp);
 
 			// Clean up the file name
@@ -498,12 +501,10 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 			if (output_filename_supplied == 0)
 				out_filename = strdup(bp);
 
-			// Create the new output full path
+			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Filename = (%s)\n", FL, fn);
 
-			snprintf(fullpath, sizeof(fullpath), "%s/%s", unpack_metadata->dir, bp );
-			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Filename = (%s)\n", FL, fullpath);
-
-			mime_el = MIME_element_add_with_path (fullpath, unpack_metadata, hinfo, 1, 1);
+			mime_el = MIME_element_add_with_path (fn, unpack_metadata, hinfo, 1, filecount);
+			free(fn);
 
 			// Allocate the write buffer.  By using the write buffer we gain an additional 10% in performance
 			// due to the lack of function call (fwrite) overheads
@@ -520,7 +521,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 				if (UUENCODE_DPEDANTIC) LOGGER_log("%s:%d:UUENCODE_decode_uu:DEBUG: Read line:\n%s",FL,buf);
 				if (FFGET_feof(finf) != 0)
 				{
-					if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:WARNING: Short file (%s)\n",FL, fullpath);
+					if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:UUENCODE_decode_uu:WARNING: Short file (%s)\n",FL, input_filename);
 					if (writebuffer != NULL) free(writebuffer);
 					uuencode_error = UUENCODE_STATUS_SHORT_FILE;
 					return -1;
@@ -621,9 +622,9 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *input_filename, char *out_filename,
 			{
 				if (glb.filename_decoded_report == NULL)
 				{
-					LOGGER_log("Decoded: %s\n", fullpath);
+					LOGGER_log("Decoded: %s\n", input_filename);
 				} else {
-					glb.filename_decoded_report( fullpath, (glb.verbosity_contenttype>0?"uuencoded":NULL) );
+					glb.filename_decoded_report( input_filename, (glb.verbosity_contenttype>0?"uuencoded":NULL) );
 				}
 			}
 

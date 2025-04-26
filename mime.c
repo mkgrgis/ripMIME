@@ -174,7 +174,6 @@ struct MIME_globals {
 };
 
 static struct MIME_globals glb;
-static char scratch[1024];
 
 /*-----------------------------------------------------------------\
   Function Name : MIME_version
@@ -1670,6 +1669,7 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
             } /* if c was the EOF */
             else if (c == '=')
             {
+                char line_buf[1025];
                 // Once we've found a stop char, we can actually just "pad" in the rest
                 // of the stop chars because we know we're at the end. Some MTA's dont
                 // put in enough stopchars... at least it seems X-MIMEOLE: Produced By Microsoft MimeOLE V5.50.4133.2400
@@ -1688,7 +1688,7 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
                 // are now only retrieving data byte at a time.
                 // So, now we -absorb- till the end of the line using FFGET_fgets()
                 stopcount = 4 -i;
-                FFGET_fgets(scratch,sizeof(scratch),f);
+                FFGET_fgets(line_buf,1024,f);
                 if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Stop char detected pos=%d...StopCount = %d\n",FL,i,stopcount);
                 i = 4;
                 break; // out of FOR.
@@ -2508,15 +2508,18 @@ int MIME_handle_multipart( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struc
         result = MIME_decode_encoding( f, unpack_metadata, h, ss );
         if (result == 0)
         {
+            char * fn;
+            int fn_l = strlen(unpack_metadata->dir) + strlen(h->filename) + sizeof(char) * 2;
+
+            fn = malloc(fn_l);
+            snprintf(fn,fn_l,"%s/%s",unpack_metadata->dir,h->filename);        
             // Because we're calling MIME_unpack_single again [ie, recursively calling it
             // we need to now adjust the input-filename so that it correctly is prefixed
             // with the directory we unpacked to.
 
-            snprintf(scratch,sizeof(scratch),"%s/%s",unpack_metadata->dir, h->filename);
-            snprintf(h->filename,sizeof(h->filename),"%s",scratch);
-
-            //result = MIME_unpack_single( unpackdir, h->filename, current_recursion_level +1, ss);
-            result = MIME_unpack_single( unpack_metadata, h->filename, current_recursion_level, ss );
+            //result = MIME_unpack_single( unpackdir, fn, current_recursion_level +1, ss);
+            result = MIME_unpack_single( unpack_metadata, fn, current_recursion_level, ss );
+            free(fn);
         }
 
     } // else-if transfer-encoding != B64 && filename was empty
@@ -2577,16 +2580,19 @@ int MIME_handle_rfc822( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
         result = MIME_decode_encoding( f, unpack_metadata, h, ss );
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Result of extracting %s is %d",FL,h->filename, result);
         if (result == 0) {
+            char * fn;
+            int fn_l = strlen(unpack_metadata->dir) + strlen(h->filename) + sizeof(char) * 2;
+
+            fn = malloc(fn_l);
+            snprintf(fn,fn_l,"%s/%s",unpack_metadata->dir,h->filename);
+
             /** Because we're calling MIME_unpack_single again [ie, recursively calling it
               we need to now adjust the input-filename so that it correctly is prefixed
               with the directory we unpacked to. **/
-
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Now attempting to extract contents of '%s'",FL,h->filename);
-            snprintf(scratch,sizeof(scratch),"%s/%s",unpack_metadata->dir, h->filename);
-            snprintf(h->filename,sizeof(h->filename),"%s",scratch);
 
-            if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Now attempting to extract contents of '%s'",FL,scratch);
-            result = MIME_unpack_single( unpack_metadata, scratch, current_recursion_level, ss );
+            result = MIME_unpack_single( unpack_metadata, fn, current_recursion_level, ss );
+            free(fn);
             result = 0;
         }
     } /** else-if transfer-encoding != B64 && filename was empty **/
@@ -2864,16 +2870,18 @@ int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
                             if (result != 0) return result; // 20040305-1313:PLD
                             else
                             {
+                                char * fn;
+                                int fn_l = strlen(unpack_metadata->dir) + strlen(h->filename) + sizeof(char) * 2;
                                 if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Now running ripMIME over decoded RFC822 message...\n",FL);
 
                                 // Because we're calling MIME_unpack_single again [ie, recursively calling it
                                 // we need to now adjust the input-filename so that it correctly is prefixed
                                 // with the directory we unpacked to.
-
-                                snprintf(scratch,sizeof(scratch),"%s/%s",unpack_metadata->dir, h->filename);
-                                snprintf(h->filename,sizeof(h->filename),"%s",scratch);
-                                //result = MIME_unpack_single( unpackdir, h->filename, current_recursion_level +1, ss);
-                                result = MIME_unpack_single( unpack_metadata, h->filename, current_recursion_level,ss );
+                                fn = malloc(fn_l);
+                                snprintf(fn,fn_l,"%s/%s",unpack_metadata->dir,h->filename);
+                                //result = MIME_unpack_single( unpackdir, fn, current_recursion_level +1, ss);
+                                result = MIME_unpack_single( unpack_metadata, fn, current_recursion_level,ss );
+                                free(fn);
                             }
 
                         } // else-if transfer-encoding wasn't B64 and filename was blank
@@ -3130,19 +3138,25 @@ int MIME_unpack_single_fp( RIPMIME_output *unpack_metadata, FILE *fi, int curren
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: DumpHeaders = %d\n",FL, glb.save_headers);
     if ((!hf)&&(glb.save_headers)&&(MIMEH_get_headers_save()==0))
     {
+        char * fn;
+        int fn_l = strlen(unpack_metadata->dir) + strlen(glb.headersname) + sizeof(char) * 2;
+
+        fn = malloc(fn_l);
+        snprintf(fn,fn_l,"%s/%s",unpack_metadata->dir,glb.headersname);
+                                
         // Prepend the unpackdir path to the headers file name
-        snprintf(scratch,sizeof(scratch),"%s/%s",unpack_metadata->dir, glb.headersname);
-        hf = fopen(scratch,"w");
+        hf = fopen(fn,"w");
         if (!hf)
         {
             glb.save_headers = 0;
-            LOGGER_log("%s:%d:%s:ERROR: Cannot open '%s' for writing  (%s)",FL, glb.headersname,strerror(errno));
+            LOGGER_log("%s:%d:%s:ERROR: Cannot open '%s' for writing  (%s)", FL, fn, strerror(errno));
         }
         else
         {
             headers_save_set_here = 1;
             MIMEH_set_headers_save(hf);
         }
+        free(fn);
     }
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Setting up streams to decode\n",FL);

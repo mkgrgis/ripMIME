@@ -17,7 +17,7 @@
 // function prototypes
 //  array container functions
 void arrayInit(dynamic_array** arr_ptr);
-void freeArray(dynamic_array* container);
+
 // Basic Operation functions
 void insertItem(dynamic_array* container, MIME_element* item);
 void updateItem(dynamic_array* container, int i, MIME_element* item);
@@ -53,7 +53,7 @@ MIME_element* MIME_element_add_with_path (char* fullpath, RIPMIME_output *unpack
     LOGGER_log("%s:%d:%s:DEBUG: Decoding [encoding=%d] to %s\n",FL, hinfo->content_transfer_encoding, cur->fullpath);
 
     if (unpack_metadata != NULL && unpack_metadata->unpack_mode == RIPMIME_UNPACK_MODE_LIST_FILES && cur->f != NULL) {
-        fprintf (stdout, "%d|%d|%d|%d|%s|%s\n", all_MIME_elements.mime_count, attachment_count, filecount, (hinfo != NULL) ? hinfo->current_recursion_level : "?", (hinfo != NULL) ? hinfo->content_type_string : "", (hinfo != NULL) ? hinfo->filename : fn);
+        fprintf (stdout, "%d|%d|%d|%d|%s|%s\n", all_MIME_elements.mime_count, attachment_count, filecount, (hinfo != NULL) ? hinfo->current_recursion_level : 0, (hinfo != NULL) ? hinfo->content_type_string : "", (hinfo != NULL) ? hinfo->filename : fn);
     }
     return cur;
 }

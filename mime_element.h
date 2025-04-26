@@ -45,5 +45,6 @@ MIME_element* MIME_element_add_with_path (char* fullpath, RIPMIME_output *unpack
 MIME_element* MIME_element_add (RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int attachment_count, int filecount);
 void MIME_element_remove (MIME_element* cur);
 void printArray(dynamic_array* container);
+void freeArray(dynamic_array* container);
 
 #endif

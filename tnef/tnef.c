@@ -278,23 +278,24 @@ Errors:
 int save_attach_data(char *title, uint8 *tsp, uint32 size, char * file_dir)
 {
 	FILE *out;
-	char filename[1024];
+	char * fn;
+	int fn_l = strlen(file_dir) + strlen(title) + sizeof(char) * 2;
 
-	snprintf(filename, sizeof(filename),"%s/%s", title );
-
-	out = fopen(filename, "w");
+	fn = malloc(fn_l);
+	snprintf(fn,fn_l,"%s/%s",file_dir,title);        
+	out = fopen(fn, "w");
 	if (!out)
 	{
-		LOGGER_log("%s:%d:TNEF_save_attach_data:ERROR: Failed opening file %s for writing (%s)\n", FL, filename, strerror(errno));
+		LOGGER_log("%s:%d:TNEF_save_attach_data:ERROR: Failed opening file %s for writing (%s)\n", FL, fn, strerror(errno));
+		free(fn);
 		return -1;
 	}
 
+	free(fn);
 	fwrite(tsp, sizeof(uint8), size, out);
 	fclose(out);
 	return 0;
 }
-
-
 
 /*------------------------------------------------------------------------
 Procedure:     handle_props ID:1
