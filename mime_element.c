@@ -90,6 +90,27 @@ void MIME_element_remove (MIME_element* cur)
 	free(cur);
 }
 
+/*
+
+    FILE *fo;
+    struct stat st;
+
+    // Determine a file name we can use.
+    do {
+
+    }
+    while (stat(glb.doubleCRname, &st) == 0);
+
+
+    fo = fopen(glb.doubleCRname,"w");
+    if (!fo)
+    {
+        LOGGER_log("%s:%d:MIMEH_save_doubleCR:ERROR: unable to open '%s' to write (%s)", FL,glb.doubleCRname,strerror(errno));
+        return -1;
+    }
+*/
+
+
 //------Dynamic array function definitions------
 // Array initialization
 void arrayInit(dynamic_array** arr_ptr)

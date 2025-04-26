@@ -195,12 +195,12 @@ char *MIMEH_get_doubleCR_name( void );
 int MIMEH_set_header_longsearch( int level );
 int MIMEH_headers_clearcount( struct MIMEH_header_info *hinfo );
 
-int MIMEH_read_headers( struct MIMEH_header_info *hinfo, FFGET_FILE *f, char* output_dir );
+int MIMEH_read_headers( struct MIMEH_header_info *hinfo, FFGET_FILE *f, RIPMIME_output *unpack_metadata );
 
-int MIMEH_headers_get( struct MIMEH_header_info *hinfo, FFGET_FILE *f, char* output_dir);
+int MIMEH_headers_get( struct MIMEH_header_info *hinfo, FFGET_FILE *f, RIPMIME_output *unpack_metadata);
 int MIMEH_headers_process( struct MIMEH_header_info *hinfo, char *headers );
 int MIMEH_headers_cleanup();
-int MIMEH_parse_headers( FFGET_FILE *f, struct MIMEH_header_info *hinfo, char* output_dir );
+int MIMEH_parse_headers( FFGET_FILE *f, struct MIMEH_header_info *hinfo, RIPMIME_output *unpack_metadata );
 
 
 int MIMEH_display_info( struct MIMEH_header_info *hinfo );
@@ -213,6 +213,6 @@ int MIMEH_get_defect_count( struct MIMEH_header_info *hinfo );
 
 int MIMEH_set_report_MIME( int level );
 
-int MIMEH_read_primary_headers( char *fname, struct MIMEH_header_info *hinfo, char* output_dir );
+int MIMEH_read_primary_headers( char *fname, struct MIMEH_header_info *hinfo, RIPMIME_output *unpack_metadata );
 
 #endif
