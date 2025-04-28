@@ -8,6 +8,13 @@
 #define RIPMIME_UNPACK_MODE_COUNT_FILES		1
 #define RIPMIME_UNPACK_MODE_LIST_FILES		2
 
+#define _MIME_RENAME_METHOD_INFIX			1
+#define _MIME_RENAME_METHOD_PREFIX			2
+#define _MIME_RENAME_METHOD_POSTFIX			3
+#define _MIME_RENAME_METHOD_RANDINFIX		4
+#define _MIME_RENAME_METHOD_RANDPREFIX		5
+#define _MIME_RENAME_METHOD_RANDPOSTFIX		6
+
 struct mime_output
 {
 	char *dir;
@@ -17,7 +24,7 @@ struct mime_output
 typedef struct mime_output RIPMIME_output;
 
 typedef struct {
-	void* parent;
+	struct MIME_element* parent;
 	int id;
 	char* directory;
 	char* filename;
@@ -42,9 +49,11 @@ typedef struct {
 extern all_MIME_elements_s all_MIME_elements;
 
 void all_MIME_elements_init (void);
-MIME_element* MIME_element_add (void* parent, RIPMIME_output *unpack_metadata, char* filename, char* content_type_string, char* content_transfer_encoding, char* name, int current_recursion_level, int attachment_count, int filecount);
+MIME_element* MIME_element_add (MIME_element* parent, RIPMIME_output *unpack_metadata, char* filename, char* content_type_string, char* content_transfer_encoding, char* name, int current_recursion_level, int attachment_count, int filecount);
 void MIME_element_remove (MIME_element* cur);
 void printArray(dynamic_array* container);
 void freeArray(dynamic_array* container);
+
+int MIME_test_uniquename( char *path, char *fname, int method );
 
 #endif

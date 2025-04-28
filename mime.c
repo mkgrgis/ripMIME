@@ -34,7 +34,6 @@
 #include <syslog.h>
 #include <ctype.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <unistd.h>
 #include <time.h>
 #include <errno.h>
@@ -161,7 +160,7 @@ struct MIME_globals {
 
     int blankzone_saved;
     int blankzone_save_option;
-    char blankzone_filename[_MIMEH_STRLEN_MAX +1];
+    char blankzone_filename[_MIMEH_STRLEN_MAX + 1];
 
     int (*filename_decoded_reporter)(char *, char *); // Pointer to the reporting function for filenames as they are decoded
 
@@ -250,6 +249,7 @@ int MIME_set_debug( int level )
     MDECODE_set_debug(level);
     UUENCODE_set_debug(level);
     FNFILTER_set_debug(level);
+    MIMEELEMENT_set_debug(level);
     return glb.debug;
 }
 
@@ -895,120 +895,6 @@ int MIME_get_attachment_count( void )
     return glb.attachment_count;
 }
 
-int get_random_value(void) {
-    int randval;
-    FILE *fp;
-    fp = fopen("/dev/urandom", "r");
-    fread(&randval, sizeof(randval), 1, fp);
-    fclose(fp);
-    if (randval < 0) { randval = randval *( -1); };
-    return randval;
-}
-
-/*------------------------------------------------------------------------
-Procedure:     MIME_test_uniquename ID:1
-Purpose:       Checks to see that the filename specified is unique. If it's not
-unique, it will modify the filename
-Input:         char *path: Path in which to look for similar filenames
-char *fname: Current filename
-int method: Method of altering the filename (infix, postfix, prefix, randinfix, randpostfix, randprefix)
-Output:
-Errors:
-------------------------------------------------------------------------*/
-int MIME_test_uniquename( char *path, char *fname, int method )
-{
-    struct stat buf;
-
-    char newname[_MIME_STRLEN_MAX +1];
-    char scr[_MIME_STRLEN_MAX +1]; /** Scratch var **/
-    char *frontname, *extention;
-
-    int cleared = 0;
-    int count = 1;
-
-    int randval = get_random_value();
-
-    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Start (%s)",FL,__func__,fname);
-
-    frontname = extention = NULL;  // shuts the compiler up
-
-    if (method == _MIME_RENAME_METHOD_INFIX)
-    {
-        PLD_strncpy(scr,fname, _MIMEH_STRLEN_MAX);
-        frontname = scr;
-        extention = strrchr(scr,'.');
-
-        if (extention)
-        {
-            *extention = '\0';
-            extention++;
-        }
-        else
-        {
-            method = _MIME_RENAME_METHOD_POSTFIX;
-        }
-    }
-
-  if (method == _MIME_RENAME_METHOD_RANDINFIX)
-    {
-        PLD_strncpy(scr,fname, _MIMEH_STRLEN_MAX);
-        frontname = scr;
-        extention = strrchr(scr,'.');
-
-        if (extention)
-        {
-            *extention = '\0';
-            extention++;
-        }
-        else
-        {
-            method = _MIME_RENAME_METHOD_RANDPOSTFIX;
-        }
-    }
-
-    snprintf(newname,_MIME_STRLEN_MAX,"%s/%s",path,fname);
-    while (!cleared)
-    {
-        if ((stat(newname, &buf) == -1))
-        {
-            cleared++;
-        }
-        else
-        {
-             switch (method) {
-                 case _MIME_RENAME_METHOD_PREFIX:
-                     snprintf(newname,_MIME_STRLEN_MAX,"%s/%d_%s",path,count,fname);
-                     break;
-                 case _MIME_RENAME_METHOD_INFIX:
-                     snprintf(newname,_MIME_STRLEN_MAX,"%s/%s_%d.%s",path,frontname,count,extention);
-                     break;
-                 case _MIME_RENAME_METHOD_POSTFIX:
-                     snprintf(newname,_MIME_STRLEN_MAX,"%s/%s_%d",path,fname,count);
-                     break;
-                 case _MIME_RENAME_METHOD_RANDPREFIX:
-                     snprintf(newname,_MIME_STRLEN_MAX,"%s/%d_%d_%s",path,count,randval,fname);
-                     break;
-                 case _MIME_RENAME_METHOD_RANDINFIX:
-                     snprintf(newname,_MIME_STRLEN_MAX,"%s/%s_%d_%d.%s",path,frontname,count,randval,extention);
-                     break;
-                 case _MIME_RENAME_METHOD_RANDPOSTFIX:
-                     snprintf(newname,_MIME_STRLEN_MAX,"%s/%s_%d_%d",path,fname,count,randval);
-            }
-            count++;
-        }
-    }
-    if (count > 1)
-    {
-        frontname = strrchr(newname,'/');
-        if (frontname) frontname++;
-        else frontname = newname;
-
-        PLD_strncpy(fname, frontname, _MIMEH_FILENAMELEN_MAX); //FIXME - this assumes that the buffer space is at least MIME_STRLEN_MAX sized.
-    }
-    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Done (%s)",FL,__func__,fname);
-    return 0;
-}
-
 /*------------------------------------------------------------------------
 Procedure:     MIME_is_RFC
 Purpose:       Determines if the file handed to it is a MIME type email file.
@@ -1226,7 +1112,7 @@ int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIME
 {
     int result = 0;
     int bufsize=1024;
-    char *buffer = malloc((bufsize +1)*sizeof(char));
+    char *buffer = malloc((bufsize + 1)*sizeof(char));
     size_t readcount;
     int file_has_uuencode = 0;
     int decode_entire_file = 0;
@@ -1603,11 +1489,11 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
                     char scratch[1024];
                     FFGET_fgets(scratch,sizeof(scratch), f);
                     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Scratch = '%s'", FL,__func__, scratch);
-                    hit = BS_cmp(scratch,strlen(scratch) +1);
+                    hit = BS_cmp(scratch,strlen(scratch) + 1);
                     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Boundary hit = %d", FL,__func__, hit);
                 } else {
                     *p = '\0';
-                    hit = BS_cmp((f->startpoint -1),strlen(f->startpoint) +1);
+                    hit = BS_cmp((f->startpoint -1),strlen(f->startpoint) + 1);
                     *p = '\n';
                 }
                 if (hit > 0) {
@@ -1895,7 +1781,7 @@ size_t MIME_read_raw( char *src_mpname, char *dest_mpname, size_t rw_buffer_size
         }
     }
 
-    rw_buffer = malloc( (rw_buffer_size +1) *sizeof(char) );
+    rw_buffer = malloc( (rw_buffer_size + 1) *sizeof(char) );
     if ( !rw_buffer )
     {
         LOGGER_log("%s:%d:%s:ERROR: could not allocate %d of memory for file read buffer\n",FL,__func__, rw_buffer_size );
@@ -2359,7 +2245,7 @@ int MIME_decode_encoding( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct
                 if (MIME_is_diskfile_RFC822(hinfo->scratch) > 0 )
                 {
                     // 20040305-1304:PLD: unpack the file, propagate result upwards
-                    result = MIME_unpack_single( unpack_metadata, hinfo->scratch, (hinfo->current_recursion_level+1),ss );
+                    result = MIME_unpack_single( unpack_metadata, hinfo->scratch, (hinfo->current_recursion_level+ 1),ss );
                 }
             }
             break;
@@ -2426,7 +2312,7 @@ int MIME_decode_encoding( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct
                 snprintf(hinfo->scratch,sizeof(hinfo->scratch),"%s/%s",unpack_metadata->dir,hinfo->filename);
 
                 // 20040305-1304:PLD: unpack the file, propagate result upwards
-                result = MIME_unpack_single( unpack_metadata, hinfo->scratch, (hinfo->current_recursion_level+1),ss );
+                result = MIME_unpack_single( unpack_metadata, hinfo->scratch, (hinfo->current_recursion_level+ 1),ss );
             }
         } // Decode MHT files
     } // If result != -1
@@ -2525,7 +2411,7 @@ int MIME_handle_multipart( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struc
             // we need to now adjust the input-filename so that it correctly is prefixed
             // with the directory we unpacked to.
 
-            //result = MIME_unpack_single( unpackdir, fn, current_recursion_level +1, ss);
+            //result = MIME_unpack_single( unpackdir, fn, current_recursion_level + 1, ss);
             result = MIME_unpack_single( unpack_metadata, fn, current_recursion_level, ss );
             free(fn);
         }
@@ -2731,7 +2617,7 @@ int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
         // Circumvent attempts to trick the boundary
         //      Even though we may end up pushing 3 boundaries to the stack
         //      they will be popped off if they're not needed.
-        if (*fbc == '"') { BS_push((fbc +1)); MIMEH_set_defect( hinfo, MIMEH_DEFECT_UNBALANCED_BOUNDARY_QUOTE); }
+        if (*fbc == '"') { BS_push((fbc + 1)); MIMEH_set_defect( hinfo, MIMEH_DEFECT_UNBALANCED_BOUNDARY_QUOTE); }
         if (*lbc == '"') { *lbc = '\0'; BS_push(h->boundary); *lbc = '"'; MIMEH_set_defect( hinfo, MIMEH_DEFECT_UNBALANCED_BOUNDARY_QUOTE); }
         h->boundary_located = 0;
     } else {
@@ -2838,8 +2724,8 @@ int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
                                   snprintf(scratch,sizeof(scratch),"%s/%s",unpackdir, h->filename);
                                   snprintf(h->filename,sizeof(h->filename),"%s",scratch);
                                   if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Now calling MIME_unpack_single() on the file '%s' for our RFC822 decode operation.",FL,__func__, scratch);
-                                //result = MIME_unpack_single( unpackdir, h->filename, current_recursion_level +1, ss);
-                                result = MIME_unpack( unpackdir, h->filename, current_recursion_level +1  );
+                                //result = MIME_unpack_single( unpackdir, h->filename, current_recursion_level + 1, ss);
+                                result = MIME_unpack( unpackdir, h->filename, current_recursion_level + 1  );
                                 if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Unpack result = %d", FL,__func__, result);
                                 result = 0;
                                 } else return result; // 20040305-1312:PLD
@@ -2887,7 +2773,7 @@ int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
                                 // with the directory we unpacked to.
                                 fn = malloc(fn_l);
                                 snprintf(fn,fn_l,"%s/%s",unpack_metadata->dir,h->filename);
-                                //result = MIME_unpack_single( unpackdir, fn, current_recursion_level +1, ss);
+                                //result = MIME_unpack_single( unpackdir, fn, current_recursion_level + 1, ss);
                                 result = MIME_unpack_single( unpack_metadata, fn, current_recursion_level,ss );
                                 free(fn);
                             }
@@ -2918,8 +2804,8 @@ int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
                                     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Testing '%s' for email type",FL,__func__,mime_fname);
                                     if (MIME_is_diskfile_RFC822(mime_fname))
                                     {
-                                        //MIME_unpack_single( unpackdir, mime_fname, (hinfo->current_recursion_level+1), ss);
-                                        MIME_unpack_single( unpack_metadata, mime_fname, current_recursion_level+1,ss);
+                                        //MIME_unpack_single( unpackdir, mime_fname, (hinfo->current_recursion_level+ 1), ss);
+                                        MIME_unpack_single( unpack_metadata, mime_fname, current_recursion_level+ 1,ss);
                                     }
                                     free(mime_fname);
                                 }
@@ -3191,7 +3077,7 @@ int MIME_unpack_single_fp( RIPMIME_output *unpack_metadata, FILE *fi, int curren
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: preparing to decode, calling stage2...\n",FL,__func__);
     // 20040318-0001:PLD
-    result = MIME_unpack_stage2(&f, unpack_metadata, &h, current_recursion_level +1, ss);
+    result = MIME_unpack_stage2(&f, unpack_metadata, &h, current_recursion_level + 1, ss);
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: done decoding ( in stage2 ) result=%d, to %s\n",FL,__func__, result, unpack_metadata->dir);
     //  fclose(fi); 20040208-1726:PLD
     if ( headers_save_set_here > 0 )
@@ -3236,7 +3122,7 @@ int MIME_unpack( RIPMIME_output *unpack_metadata, char *mpname, int current_recu
     else
     {
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s: Unpacking standard mailpack",FL,__func__,mpname,unpack_metadata->dir,current_recursion_level);
-        result = MIME_unpack_single( unpack_metadata, mpname, (current_recursion_level +1), &ss );
+        result = MIME_unpack_single( unpack_metadata, mpname, (current_recursion_level + 1), &ss );
     }
 
     if (glb.no_nameless)
