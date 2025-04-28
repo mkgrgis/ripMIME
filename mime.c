@@ -1196,7 +1196,7 @@ int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIME
             else LOGGER_log("%s:%d:%s:WARNING: hinfo has been clobbered.\n",FL,__func__);
         }
     }
-    MIME_element_remove(cur_mime);
+    MIME_element_free(cur_mime);
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Closed file and free'd buffer\n",FL,__func__);
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: End[result = %d]\n",FL,__func__,result);
@@ -1276,7 +1276,7 @@ int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIM
         } // while
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Done writing output file '%s'...now attempting to close.",FL,__func__, cur_mime->fullpath);
 
-        MIME_element_remove(cur_mime);
+        MIME_element_free(cur_mime);
 
         if (linecount == 0)
         {
@@ -1551,7 +1551,7 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
                 if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: input stream broken for base64 decoding for file %s. %ld bytes of data in buffer to be written out\n",FL,__func__,hinfo->filename,wbcount);
                 status = MIME_ERROR_B64_INPUT_STREAM_EOF;
                 fwrite(writebuffer, 1, wbcount, cur_mime->f);
-                MIME_element_remove(cur_mime);
+                MIME_element_free(cur_mime);
                 if (writebuffer) free(writebuffer);
                 return status;
                 break;
@@ -1644,7 +1644,7 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
                 fwrite(writebuffer, 1, wbcount, cur_mime->f);
             }
             /* close the output file, we're done writing to it */
-            MIME_element_remove(cur_mime);
+            MIME_element_free(cur_mime);
             /* if we didn't really write anything, then trash the  file */
             if (bytecount == 0)
             {

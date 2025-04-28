@@ -1519,7 +1519,7 @@ int OLE_store_stream( struct OLE_object *ole, char *stream_name, RIPMIME_output 
 	{
 		LOGGER_log("%s:%d:%s:WARNING: Only wrote %d of %d bytes to file %s",FL,__func__,written_bytes,stream_size,cur_mime->fullpath);
 	}
-	MIME_element_remove (cur_mime);
+	MIME_element_free (cur_mime);
 
 	if ((OLE_VNORMAL(ole->verbose))&&(ole->filename_report_fn != NULL))
 	{

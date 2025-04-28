@@ -50,7 +50,7 @@ extern all_MIME_elements_s all_MIME_elements;
 
 void all_MIME_elements_init (void);
 MIME_element* MIME_element_add (MIME_element* parent, RIPMIME_output *unpack_metadata, char* filename, char* content_type_string, char* content_transfer_encoding, char* name, int current_recursion_level, int attachment_count, int filecount);
-void MIME_element_remove (MIME_element* cur);
+void MIME_element_free (MIME_element* cur);
 void printArray(dynamic_array* container);
 void freeArray(dynamic_array* container);
 

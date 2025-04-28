@@ -96,7 +96,7 @@ static void dup_free(char *s)
 		free(s);
 }
 
-void MIME_element_remove (MIME_element* cur)
+void MIME_element_free (MIME_element* cur)
 {
 	if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:start\n",FL,__func__);
 
@@ -276,7 +276,7 @@ void arrayInit(dynamic_array** arr_ptr)
 	dynamic_array *container;
 	container = (dynamic_array*)malloc(sizeof(dynamic_array));
 	if(!container) {
-		printf("Memory Allocation Failed\n");
+		LOGGER_log("%s:%d:%s:ERROR: Memory allocation failed", FL,__func__);
 		exit(0);
 	}
 
@@ -284,7 +284,7 @@ void arrayInit(dynamic_array** arr_ptr)
 	container->capacity = INITIAL_SIZE;
 	container->array = (MIME_element **)malloc(INITIAL_SIZE * sizeof(MIME_element*));
 	if (!container->array){
-		printf("Memory Allocation Failed\n");
+		LOGGER_log("%s:%d:%s:ERROR: Memory allocation failed", FL,__func__);
 		exit(0);
 	}
 
@@ -299,7 +299,7 @@ void insertItem(dynamic_array* container, MIME_element* item)
 		container->capacity <<= 1;
 		container->array = realloc(container->array, container->capacity * sizeof(MIME_element*));
 		if(!container->array) {
-			printf("Out of Memory\n");
+			LOGGER_log("%s:%d:%s:ERROR: Out of memory reallocation", FL,__func__);
 			container->array = temp;
 			return;
 		}
@@ -311,7 +311,7 @@ void insertItem(dynamic_array* container, MIME_element* item)
 MIME_element* getItem(dynamic_array* container, int index)
 {
 	if(index >= container->size) {
-		printf("Index Out of Bounds\n");
+		LOGGER_log("%s:%d:%s:ERROR: Index %d is out of bounds", FL,__func__, index);
 		return NULL;
 	}
 	return container->array[index];
@@ -321,7 +321,7 @@ MIME_element* getItem(dynamic_array* container, int index)
 void updateItem(dynamic_array* container, int index, MIME_element* item)
 {
 	if (index >= container->size) {
-		printf("Index Out of Bounds\n");
+		LOGGER_log("%s:%d:%s:ERROR: Index %d is out of bounds", FL,__func__, index);
 		return;
 	}
 	container->array[index] = item;
@@ -331,7 +331,7 @@ void updateItem(dynamic_array* container, int index, MIME_element* item)
 void deleteItem(dynamic_array* container, int index)
 {
 	if(index >= container->size) {
-		printf("Index Out of Bounds\n");
+		LOGGER_log("%s:%d:%s:ERROR: Index %d is out of bounds", FL,__func__, index);
 		return;
 	}
 

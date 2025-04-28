@@ -167,7 +167,7 @@ int OLEUNWRAP_save_stream( struct OLEUNWRAP_object *oleuw, char *fname, RIPMIME_
 		LOGGER_log("%s:%d:%s:WARNING: Only wrote %d of %d bytes to file %s\n",FL,__func__, write_count, bytes, cur_mime->fullpath );
 	}
 
-	MIME_element_remove (cur_mime);
+	MIME_element_free (cur_mime);
 	DUW LOGGER_log("%s:%d:%s:DEBUG: Done saving '%s'",FL,__func__, fname);
 
 	return result;
