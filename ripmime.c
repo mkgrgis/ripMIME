@@ -43,6 +43,7 @@ struct RIPMIME_globals
    int quiet;
    int verbose_defects;
    int verbose;
+   int rename_method;
 };
 
 //-b [blankzone file name] : Dump the contents of the MIME blankzone to 'filename'
@@ -322,28 +323,28 @@ int RIPMIME_parse_parameters (struct RIPMIME_globals *glb, int argc, char **argv
                        }
                        else if (strncmp (&(argv[i][2]), "prefix", 6) == 0)
                        {
-                           MIME_set_renamemethod (_MIME_RENAME_METHOD_PREFIX);
+                           glb->rename_method = _MIME_RENAME_METHOD_PREFIX;
                        }
                        else if (strncmp (&(argv[i][2]), "postfix", 7) == 0)
                        {
-                           MIME_set_renamemethod (_MIME_RENAME_METHOD_POSTFIX);
+                           glb->rename_method = _MIME_RENAME_METHOD_POSTFIX;
                        }
                        else if (strncmp (&(argv[i][2]), "infix", 5) == 0)
                        {
-                           MIME_set_renamemethod (_MIME_RENAME_METHOD_INFIX);
+                           glb->rename_method = _MIME_RENAME_METHOD_INFIX;
                        }
                        /* New methods of generating file name: add counter and random number*/
                        else if (strncmp (&(argv[i][2]), "randprefix", 10) == 0)
                        {
-                           MIME_set_renamemethod (_MIME_RENAME_METHOD_RANDPREFIX);
+                           glb->rename_method = _MIME_RENAME_METHOD_RANDPREFIX;
                        }
                        else if (strncmp (&(argv[i][2]), "randpostfix", 11) == 0)
                        {
-                           MIME_set_renamemethod (_MIME_RENAME_METHOD_RANDPOSTFIX);
+                           glb->rename_method = _MIME_RENAME_METHOD_RANDPOSTFIX;
                        }
                        else if (strncmp (&(argv[i][2]), "randinfix", 9) == 0)
                        {
-                           MIME_set_renamemethod (_MIME_RENAME_METHOD_RANDINFIX);
+                           glb->rename_method = _MIME_RENAME_METHOD_RANDINFIX;
                        }
                        else if (strncmp (&(argv[i][2]), "overwrite", 9) == 0)
                        {
@@ -511,7 +512,6 @@ int RIPMIME_parse_parameters (struct RIPMIME_globals *glb, int argc, char **argv
 }
 
 
-
 /*-----------------------------------------------------------------\
 Function Name  : RIPMIME_init
 Returns Type   : int
@@ -538,7 +538,7 @@ int RIPMIME_init (struct RIPMIME_globals *glb, RIPMIME_output *o)
    glb->quiet = 0;
    glb->verbose_defects = 0;
    glb->verbose = 0;
-
+   glb->rename_method = _MIME_RENAME_METHOD_INFIX;
    return 0;
 }
 
@@ -594,7 +594,7 @@ int RIPMIME_unpack_single( struct RIPMIME_globals *glb, char *fname )
 
    // do any last minute things
 
-   MIME_close ();
+   MIME_close (glb->output, glb->rename_method);
 
    return result;
 }
@@ -721,9 +721,9 @@ int main (int argc, char **argv)
    MIME_set_uniquenames (1);
    MIME_set_paranoid (0);
    MIME_set_header_longsearch(1); // 20040310-0117:PLD - Added by default as it seems stable, use --disable-qmail-bounce to turn off
-   MIME_set_renamemethod (_MIME_RENAME_METHOD_INFIX);
 
    RIPMIME_parse_parameters (&glb, argc, argv);
+   MIME_set_renamemethod (glb.rename_method);
 
    // if our input filename wasn't specified, then we better let the user know!
    if (!glb.inputfile)

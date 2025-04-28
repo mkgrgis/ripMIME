@@ -52,12 +52,12 @@ void all_MIME_elements_init (void)
 
 all_MIME_elements_s all_MIME_elements;
 
-static char * dup_ini (char* s)
+static char * dup_ini(char* s)
 {
 	return (s != NULL) ? strdup(s) : "\0";
 }
 
-MIME_element* MIME_element_add (MIME_element* parent, RIPMIME_output *unpack_metadata, char* filename, char* content_type_string, char* content_transfer_encoding, char* name, int current_recursion_level, int attachment_count, int filecount)
+MIME_element* MIME_element_add(struct MIME_element* parent, RIPMIME_output *unpack_metadata, char* filename, char* content_type_string, char* content_transfer_encoding, char* name, int current_recursion_level, int attachment_count, int filecount)
 {
 	MIME_element *cur = malloc(sizeof(MIME_element));
 	int fullpath_len = 0;
@@ -94,6 +94,11 @@ static void dup_free(char *s)
 {
 	if ((s != NULL) && s[0])
 		free(s);
+}
+
+void MIME_element_deactivate(MIME_element* cur, RIPMIME_output *unpack_metadata)
+{
+	MIME_element_free(cur);
 }
 
 void MIME_element_free (MIME_element* cur)
@@ -239,13 +244,13 @@ static void copyFILEcontent(FILE* src, FILE* dst)
 	}
 }
 
-void write_FS_file (MIME_element* cur, RIPMIME_output *unpack_metadata, int method)
+void write_FS_file(MIME_element* cur, int rename_method)
 {
 	char * wr_filename = NULL;
 	FILE* wf = NULL;
 	int fn_l = 0;
 
-	MIME_test_uniquename(cur->directory, cur->filename, method);
+	MIME_test_uniquename(cur->directory, cur->filename, rename_method);
 	fn_l = strlen(cur->directory) + strlen(cur->filename) + sizeof(char) * 2;
 	wr_filename = malloc(fn_l);
 	snprintf(wr_filename,fn_l,"%s/%s",cur->directory,cur->filename);
@@ -267,6 +272,17 @@ void write_FS_file (MIME_element* cur, RIPMIME_output *unpack_metadata, int meth
 
 	free(wr_filename);
 	fclose(wf);
+}
+
+void write_all_to_FS_files(RIPMIME_output *unpack_metadata, int rename_method)
+{
+	int i = 0;
+
+	for (; i < all_MIME_elements.mime_count; i++);
+	{
+		MIME_element*  m = getItem(all_MIME_elements.mime_arr, i);
+		write_FS_file(m, rename_method);
+	}
 }
 
 //------Dynamic array function definitions------

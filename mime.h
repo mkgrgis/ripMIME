@@ -105,7 +105,7 @@ char *MIME_get_blankfileprefix( void );
 char *MIME_get_headersname( void );
 char *MIME_get_subject( void );
 void MIME_init( void );
-void MIME_close( void );
+void MIME_close( RIPMIME_output *unpack_metadata, int rename_method );
 int MIME_set_tmpdir( char *tmpdir );
 
 #endif

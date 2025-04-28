@@ -747,7 +747,7 @@ int MIMEH_save_doubleCR( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct 
             break;
         }
     }
-    MIME_element_free(cur_mime);
+    MIME_element_deactivate(cur_mime, unpack_metadata);
     return 0;
 }
 

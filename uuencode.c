@@ -603,7 +603,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *out_filename, int decode_whole_file
 				}
 			}
 
-			MIME_element_free(cur_mime);
+			MIME_element_deactivate(cur_mime, unpack_metadata);
 			// Call our reporting function, else, if no function is defined, use the default
 			//		standard call
 

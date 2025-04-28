@@ -727,8 +727,6 @@ Errors:
 int TNEF_main( char *filename, char *file_dir )
 {
 	FILE *fp;
-	uint8 *tnef_stream;
-	int size, nread;
 
 	if (TNEF_DEBUG) LOGGER_log("%s:%d:%s:DEBUG: Start, decoding %s\n",FL,__func__, filename);
 
