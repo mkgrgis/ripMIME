@@ -52,8 +52,8 @@ int MIME_version( void );
 size_t MIME_read_raw( char *src_mpname, char *dest_mpname, size_t rw_buffer_size );
 int MIME_read( char *mpname ); /* returns filesize in KB */
 int MIME_unpack( RIPMIME_output *unpack_metadata, char *mpname, int current_recusion_level );
-//int MIME_unpack_single( RIPMIME_output *unpack_metadata, char *mpname, int current_recusion_level );
-//int MIME_unpack_single_fp( RIPMIME_output *unpack_metadata, FILE *fi, int current_recusion_level );
+//int MIME_unpack_single_disk_file( RIPMIME_output *unpack_metadata, char *mpname, int current_recusion_level );
+//int MIME_unpack_single_disk_file_fp( RIPMIME_output *unpack_metadata, FILE *fi, int current_recusion_level );
 //int MIME_unpack_mailbox( RIPMIME_output *unpack_metadata, char *mpname, int current_recursion_level );
 int MIME_insert_Xheader( char *fname, char *xheader );
 int MIME_set_blankfileprefix( char *prefix );

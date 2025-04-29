@@ -60,8 +60,8 @@
 
 
 int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int current_recursion_level, struct SS_object *ss );
-int MIME_unpack_single( RIPMIME_output *unpack_metadata, char *mpname, int current_recursion_level, struct SS_object *ss );
-int MIME_unpack_single_fp( RIPMIME_output *unpack_metadata, FILE *fi, int current_recursion_level, struct SS_object *ss );
+int MIME_unpack_single_diskfile( RIPMIME_output *unpack_metadata, char *mpname, int current_recursion_level, struct SS_object *ss );
+int MIME_unpack_single_file( RIPMIME_output *unpack_metadata, FILE *fi, int current_recursion_level, struct SS_object *ss );
 int MIME_unpack_mailbox( RIPMIME_output *unpack_metadata, char *mpname, int current_recursion_level, struct SS_object *ss );
 int MIME_handle_multipart( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss );
 int MIME_handle_rfc822( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss );
@@ -2245,7 +2245,7 @@ int MIME_decode_encoding( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct
                 if (MIME_is_diskfile_RFC822(hinfo->scratch) > 0 )
                 {
                     // 20040305-1304:PLD: unpack the file, propagate result upwards
-                    result = MIME_unpack_single( unpack_metadata, hinfo->scratch, (hinfo->current_recursion_level+ 1),ss );
+                    result = MIME_unpack_single_diskfile( unpack_metadata, hinfo->scratch, (hinfo->current_recursion_level+ 1),ss );
                 }
             }
             break;
@@ -2312,7 +2312,7 @@ int MIME_decode_encoding( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct
                 snprintf(hinfo->scratch,sizeof(hinfo->scratch),"%s/%s",unpack_metadata->dir,hinfo->filename);
 
                 // 20040305-1304:PLD: unpack the file, propagate result upwards
-                result = MIME_unpack_single( unpack_metadata, hinfo->scratch, (hinfo->current_recursion_level+ 1),ss );
+                result = MIME_unpack_single_diskfile( unpack_metadata, hinfo->scratch, (hinfo->current_recursion_level+ 1),ss );
             }
         } // Decode MHT files
     } // If result != -1
@@ -2407,12 +2407,12 @@ int MIME_handle_multipart( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struc
 
             fn = malloc(fn_l);
             snprintf(fn,fn_l,"%s/%s",unpack_metadata->dir,h->filename);
-            // Because we're calling MIME_unpack_single again [ie, recursively calling it
+            // Because we're calling MIME_unpack_single_diskfile again [ie, recursively calling it
             // we need to now adjust the input-filename so that it correctly is prefixed
             // with the directory we unpacked to.
 
-            //result = MIME_unpack_single( unpackdir, fn, current_recursion_level + 1, ss);
-            result = MIME_unpack_single( unpack_metadata, fn, current_recursion_level, ss );
+            //result = MIME_unpack_single_diskfile( unpackdir, fn, current_recursion_level + 1, ss);
+            result = MIME_unpack_single_diskfile( unpack_metadata, fn, current_recursion_level, ss );
             free(fn);
         }
 
@@ -2480,12 +2480,12 @@ int MIME_handle_rfc822( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
             fn = malloc(fn_l);
             snprintf(fn,fn_l,"%s/%s",unpack_metadata->dir,h->filename);
 
-            /** Because we're calling MIME_unpack_single again [ie, recursively calling it
+            /** Because we're calling MIME_unpack_single_diskfile again [ie, recursively calling it
               we need to now adjust the input-filename so that it correctly is prefixed
               with the directory we unpacked to. **/
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Now attempting to extract contents of '%s'",FL,__func__,h->filename);
 
-            result = MIME_unpack_single( unpack_metadata, fn, current_recursion_level, ss );
+            result = MIME_unpack_single_diskfile( unpack_metadata, fn, current_recursion_level, ss );
             free(fn);
             result = 0;
         }
@@ -2525,9 +2525,9 @@ int MIME_handle_plain( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MI
         snprintf(h->scratch,sizeof(h->scratch),"%s/%s",unpack_metadata->dir,h->filename);
         if (MIME_is_diskfile_RFC822(h->scratch)==1)
         {
-            /** If the file is RFC822, then decode it using MIME_unpack_single() **/
+            /** If the file is RFC822, then decode it using MIME_unpack_single_diskfile() **/
             if (glb.header_longsearch != 0) MIMEH_set_header_longsearch(glb.header_longsearch);
-            result = MIME_unpack_single( unpack_metadata, h->scratch, current_recursion_level, ss );
+            result = MIME_unpack_single_diskfile( unpack_metadata, h->scratch, current_recursion_level, ss );
             if (glb.header_longsearch != 0) MIMEH_set_header_longsearch(0);
         }
     }
@@ -2723,8 +2723,8 @@ int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
                                   {
                                   snprintf(scratch,sizeof(scratch),"%s/%s",unpackdir, h->filename);
                                   snprintf(h->filename,sizeof(h->filename),"%s",scratch);
-                                  if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Now calling MIME_unpack_single() on the file '%s' for our RFC822 decode operation.",FL,__func__, scratch);
-                                //result = MIME_unpack_single( unpackdir, h->filename, current_recursion_level + 1, ss);
+                                  if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Now calling MIME_unpack_single_diskfile() on the file '%s' for our RFC822 decode operation.",FL,__func__, scratch);
+                                //result = MIME_unpack_single_diskfile( unpackdir, h->filename, current_recursion_level + 1, ss);
                                 result = MIME_unpack( unpackdir, h->filename, current_recursion_level + 1  );
                                 if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Unpack result = %d", FL,__func__, result);
                                 result = 0;
@@ -2768,13 +2768,13 @@ int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
                                 int fn_l = strlen(unpack_metadata->dir) + strlen(h->filename) + sizeof(char) * 2;
                                 if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Now running ripMIME over decoded RFC822 message...\n",FL,__func__);
 
-                                // Because we're calling MIME_unpack_single again [ie, recursively calling it
+                                // Because we're calling MIME_unpack_single_diskfile again [ie, recursively calling it
                                 // we need to now adjust the input-filename so that it correctly is prefixed
                                 // with the directory we unpacked to.
                                 fn = malloc(fn_l);
                                 snprintf(fn,fn_l,"%s/%s",unpack_metadata->dir,h->filename);
-                                //result = MIME_unpack_single( unpackdir, fn, current_recursion_level + 1, ss);
-                                result = MIME_unpack_single( unpack_metadata, fn, current_recursion_level,ss );
+                                //result = MIME_unpack_single_diskfile( unpackdir, fn, current_recursion_level + 1, ss);
+                                result = MIME_unpack_single_diskfile( unpack_metadata, fn, current_recursion_level,ss );
                                 free(fn);
                             }
 
@@ -2804,8 +2804,8 @@ int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
                                     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Testing '%s' for email type",FL,__func__,mime_fname);
                                     if (MIME_is_diskfile_RFC822(mime_fname))
                                     {
-                                        //MIME_unpack_single( unpackdir, mime_fname, (hinfo->current_recursion_level+ 1), ss);
-                                        MIME_unpack_single( unpack_metadata, mime_fname, current_recursion_level+ 1,ss);
+                                        //MIME_unpack_single_diskfile( unpackdir, mime_fname, (hinfo->current_recursion_level+ 1), ss);
+                                        MIME_unpack_single_diskfile( unpack_metadata, mime_fname, current_recursion_level+ 1,ss);
                                     }
                                     free(mime_fname);
                                 }
@@ -2880,9 +2880,9 @@ int MIME_unpack_mailbox( RIPMIME_output *unpack_metadata, char *mpname, int curr
             // Close the mailpack
             fclose(fo);
             // Now, decode the mailpack
-            //MIME_unpack_single(unpackdir, fname, current_recursion_level, ss);
+            //MIME_unpack_single_diskfile(unpackdir, fname, current_recursion_level, ss);
             // 20040317-2358:PLD
-            MIME_unpack_single(unpack_metadata, fname, current_recursion_level ,ss );
+            MIME_unpack_single_diskfile(unpack_metadata, fname, current_recursion_level ,ss );
             // Remove the now unpacked mailpack
             result = remove(fname);
             if (result == -1)
@@ -2925,9 +2925,9 @@ int MIME_unpack_mailbox( RIPMIME_output *unpack_metadata, char *mpname, int curr
     fclose(fo);
 
     // Now, decode the mailpack
-    //MIME_unpack_single(unpackdir, fname, current_recursion_level, ss);
+    //MIME_unpack_single_diskfile(unpackdir, fname, current_recursion_level, ss);
     // 20040317-2358:PLD
-    MIME_unpack_single(unpack_metadata, fname, current_recursion_level , ss );
+    MIME_unpack_single_diskfile(unpack_metadata, fname, current_recursion_level , ss );
     // Remove the now unpacked mailpack
     result = remove(fname);
     if (result == -1)
@@ -2938,7 +2938,7 @@ int MIME_unpack_mailbox( RIPMIME_output *unpack_metadata, char *mpname, int curr
 }
 
 /*-----------------------------------------------------------------\
-  Function Name : MIME_unpack_single
+  Function Name : MIME_unpack_single_diskfile
   Returns Type  : int
   ----Parameter List
   1. RIPMIME_output *unpack_metadata,
@@ -2954,7 +2954,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIME_unpack_single( RIPMIME_output *unpack_metadata, char *mpname, int current_recursion_level, struct SS_object *ss )
+int MIME_unpack_single_diskfile( RIPMIME_output *unpack_metadata, char *mpname, int current_recursion_level, struct SS_object *ss )
 {
     FILE *fi;           /* Pointer for the MIME file we're going to be going through */
     int result = 0;
@@ -2990,7 +2990,7 @@ int MIME_unpack_single( RIPMIME_output *unpack_metadata, char *mpname, int curre
         return -1;
     }
     // 20040317-2359:PLD
-    result = MIME_unpack_single_fp(unpack_metadata,fi,current_recursion_level , ss);
+    result = MIME_unpack_single_file(unpack_metadata,fi,current_recursion_level , ss);
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: result = %d, recursion = %d, filename = '%s'", FL,__func__, result, current_recursion_level, mpname );
     if ((current_recursion_level > 1)&&(result == 241)) result = 0;
     fclose(fi);
@@ -2998,7 +2998,7 @@ int MIME_unpack_single( RIPMIME_output *unpack_metadata, char *mpname, int curre
 }
 
 /*------------------------------------------------------------------------
-Procedure:     MIME_unpack_single ID:1
+Procedure:     MIME_unpack_single_diskfile ID:1
 Purpose:       Decodes a single mailpack file (as apposed to mailbox format) into its
 possible attachments and text bodies
 Input:         RIPMIME_output *unpack_metadata: Directory to unpack the attachments to
@@ -3007,7 +3007,7 @@ int current_recusion_level: Level of recursion we're currently at.
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_unpack_single_fp( RIPMIME_output *unpack_metadata, FILE *fi, int current_recursion_level, struct SS_object *ss )
+int MIME_unpack_single_file( RIPMIME_output *unpack_metadata, FILE *fi, int current_recursion_level, struct SS_object *ss )
 {
     struct MIMEH_header_info h;
     int result = 0;
@@ -3122,7 +3122,7 @@ int MIME_unpack( RIPMIME_output *unpack_metadata, char *mpname, int current_recu
     else
     {
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s: Unpacking standard mailpack",FL,__func__,mpname,unpack_metadata->dir,current_recursion_level);
-        result = MIME_unpack_single( unpack_metadata, mpname, (current_recursion_level + 1), &ss );
+        result = MIME_unpack_single_diskfile( unpack_metadata, mpname, (current_recursion_level + 1), &ss );
     }
 
     if (glb.no_nameless)
