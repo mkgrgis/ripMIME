@@ -1529,7 +1529,7 @@ int OLE_store_stream( struct OLE_object *ole, char *stream_name, RIPMIME_output 
 }
 
 /*-----------------------------------------------------------------\
-  Function Name	: OLE_decode_file_done
+  Function Name	: OLE_decode_done
   Returns Type	: int
   ----Parameter List
   1. struct OLE_object *ole , 
@@ -1543,7 +1543,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-void OLE_decode_file_done( struct OLE_object *ole )
+void OLE_decode_done( struct OLE_object *ole )
 {
 	DOLE LOGGER_log("%s:%d:%s:DEBUG: ole->f close",FL,__func__);
 	if (ole->f) fclose(ole->f);
@@ -1575,7 +1575,7 @@ Changes:
 \------------------------------------------------------------------*/
 int OLE_terminate_and_return( struct OLE_object *ole, int result )
 {
-	OLE_decode_file_done(ole);
+	OLE_decode_done(ole);
 	return result;
 }
 
@@ -1628,7 +1628,7 @@ int OLE_decode_stream( struct OLE_object *ole, struct OLE_directory_entry *adir,
 		if (stream_data == NULL)
 		{
 			DOLE LOGGER_log("%s:%d:%s:DEBUG: Terminating from stream data being NULL  ",FL,__func__);
-			//OLE_decode_file_done(ole);
+			//OLE_decode_done(ole);
 			return OLEER_MINISTREAM_STREAM_READ_FAIL;
 		}
 		DOLE LOGGER_log("%s:%d:%s:DEBUG: Normal decode START. element name ='%s' stream size = '%ld'",FL,__func__, element_name, adir->stream_size);
@@ -1645,7 +1645,7 @@ int OLE_decode_stream( struct OLE_object *ole, struct OLE_directory_entry *adir,
 		if (stream_data == NULL)
 		{
 			DOLE LOGGER_log("%s:%d:%s:DEBUG: Ministream was non-existant, terminating",FL,__func__);
-			//OLE_decode_file_done(ole);
+			//OLE_decode_done(ole);
 			return OLEER_NORMALSTREAM_STREAM_READ_FAIL;
 		}
 		DOLE LOGGER_log("%s:%d:%s:DEBUG: Mini decode START.",FL,__func__);
@@ -1775,13 +1775,13 @@ int OLE_decode( struct OLE_object *ole, RIPMIME_output *unpack_metadata )
 
 	DOLE LOGGER_log("%s:%d:%s:DEBUG: Finished",FL,__func__);
 
-	/* OLE_decode_file_done(ole);
+	/* OLE_decode_done(ole);
 	 */
 	return OLE_OK;
 }
 
 /*-----------------------------------------------------------------\
-  Function Name	: OLE_decode_file
+  Function Name	: OLE_decode_diskfile
   Returns Type	: int
   ----Parameter List
   1. char *fname, 
@@ -1796,7 +1796,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int OLE_decode_file( struct OLE_object *ole, char *fname, RIPMIME_output *unpack_metadata )
+int OLE_decode_diskfile( struct OLE_object *ole, char *fname, RIPMIME_output *unpack_metadata )
 {
 	int result = 0;
 
