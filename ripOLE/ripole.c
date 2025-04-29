@@ -338,8 +338,8 @@ int main( int argc, char **argv )
 
 	o.dir = role.outputdir;
 	o.unpack_mode = RIPMIME_UNPACK_MODE_TO_DIRECTORY;
-	result = OLE_decode_file( ole, role.inputfile, &o );
-	OLE_decode_file_done(ole);
+	result = OLE_decode_diskfile( ole, role.inputfile, &o );
+	OLE_decode_done(ole);
 
 	if ((result != 0)) {
 		if (role.verbose) {

@@ -1074,13 +1074,16 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIME_decode_OLE( RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int keep )
+/*
+int MIME_decode_OLE_diskfile( RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int keep )
 {
     struct OLE_object ole;
-    char fullpath[1024];
-    int result;
+    char * fn;
+    int result = 0;
+    int fn_l = strlen(unpack_metadata->dir) + strlen(hinfo->filename) + sizeof(char) * 2;
 
-    snprintf(fullpath,sizeof(fullpath),"%s/%s",unpack_metadata->dir,hinfo->filename);
+    fn = malloc(fn_l);
+    snprintf(fn,fn_l,"%s/%s",unpack_metadata->dir,hinfo->filename);
 
     OLE_init(&ole);
     OLE_set_quiet(&ole,glb.quiet);
@@ -1090,15 +1093,40 @@ int MIME_decode_OLE( RIPMIME_output *unpack_metadata, struct MIMEH_header_info *
     OLE_set_filename_report_fn(&ole, MIME_report_filename_decoded_RIPOLE );
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Starting OLE Decode",FL,__func__);
-    result = OLE_decode_file(&ole, fullpath, unpack_metadata );
+    result = OLE_decode_diskfile(&ole, fn, unpack_metadata );
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decode done, cleaning up.",FL,__func__);
-    OLE_decode_file_done(&ole);
+    OLE_decode_done(&ole);
+    free(fn);
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decode returned with code = %d",FL,__func__,result);
+
+    return result;
+}
+*/
+
+int MIME_decode_OLE_file( RIPMIME_output *unpack_metadata, FILE* f, int keep )
+{
+    struct OLE_object ole;
+    int result = 0;
+
+    OLE_init(&ole);
+    OLE_set_quiet(&ole,glb.quiet);
+    OLE_set_verbose(&ole,glb.verbosity);
+    OLE_set_debug(&ole,glb.debug);
+    OLE_set_save_unknown_streams(&ole,0);
+    OLE_set_filename_report_fn(&ole, MIME_report_filename_decoded_RIPOLE );
+
+    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Starting OLE Decode",FL,__func__);
+
+    result = OLE_decode_file(&ole, f, unpack_metadata );
+    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decode done, cleaning up.",FL,__func__);
+    OLE_decode_done(&ole);
+
+    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decode returned with code = %d",FL,__func__,result);
+
     return result;
 }
 #endif
-
 
 
 /*------------------------------------------------------------------------
@@ -1108,7 +1136,7 @@ Input:
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int keep )
+int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int keep, MIME_element* cur_mime )
 {
     int result = 0;
     int bufsize=1024;
@@ -1116,7 +1144,6 @@ int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIME
     size_t readcount;
     int file_has_uuencode = 0;
     int decode_entire_file = 0;
-    MIME_element* cur_mime = NULL;
 
     /* Decoding / reading a binary attachment is a real interesting situation, as we
      * still use the fgets() call, but we do so repeatedly until it returns a line with a
@@ -1212,7 +1239,7 @@ keep : if set, retain the file
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int keep )
+int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int keep, MIME_element* cur_mime )
 {
     int linecount = 0;                  // The number of lines
     int file_has_uuencode = 0;          // Flag to indicate this text has UUENCODE in it
@@ -1220,8 +1247,8 @@ int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIM
     char *get_result = &line[0];
     int lastlinewasboundary = 0;
     int result = 0;
+
     int decodesize=0;
-    MIME_element* cur_mime = NULL;
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding TEXT [encoding=%d] to %s\n",FL,__func__, hinfo->content_transfer_encoding, hinfo->filename);
 
@@ -2060,6 +2087,7 @@ int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, 
 {
     int keep = 1;
     int result = -1;
+    MIME_element* decoded_mime = NULL;
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Start:DEBUG: (%s)\n",FL,__func__, hinfo->filename);
 
@@ -2186,20 +2214,20 @@ int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, 
             break;
         case _CTRANS_ENCODING_7BIT:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding 7BIT format\n",FL,__func__);
-            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep);
+            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep, decoded_mime);
             break;
         case _CTRANS_ENCODING_8BIT:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding 8BIT format\n",FL,__func__);
-            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep);
+            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep, decoded_mime);
             break;
         case _CTRANS_ENCODING_BINARY:
         case _CTRANS_ENCODING_RAW:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding RAW format\n",FL,__func__);
-            result = MIME_decode_raw(input_f, unpack_metadata, hinfo, keep);
+            result = MIME_decode_raw(input_f, unpack_metadata, hinfo, keep, decoded_mime);
             break;
         case _CTRANS_ENCODING_QP:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding Quoted-Printable format\n",FL,__func__);
-            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep);
+            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep, decoded_mime);
             break;
         case _CTRANS_ENCODING_UUENCODE:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UUENCODED format\n",FL,__func__);
@@ -2215,17 +2243,17 @@ int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, 
             switch (hinfo->content_disposition) {
                 case _CDISPOSITION_FORMDATA:
                     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UNKNOWN format of FORMDATA disposition\n",FL,__func__);
-                    result = MIME_decode_raw(input_f, unpack_metadata, hinfo, keep);
+                    result = MIME_decode_raw(input_f, unpack_metadata, hinfo, keep, decoded_mime);
                     break;
                 default:
                     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UNKNOWN format\n",FL,__func__);
-                    result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep);
+                    result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep, decoded_mime);
             }
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: UNKNOWN Decode completed, result = %d\n",FL,__func__,result);
             break;
         case _CTRANS_ENCODING_UNSPECIFIED:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UNSPECIFIED format\n",FL,__func__);
-            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep);
+            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep, decoded_mime);
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding result for UNSPECIFIED format = %d\n",FL,__func__, result);
             // 20040114-1236:PLD: Added nested mail checking
             //
@@ -2238,22 +2266,29 @@ int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, 
             //      because dud headers will always result in a UNSPECIFIED encoding
             //
             //  Original sample mailpack was sent by Farit - thanks.
-            if (1)
+
+            if (MIME_is_file_RFC822(decoded_mime->f) > 0 )
             {
-                snprintf(hinfo->scratch,sizeof(hinfo->scratch),"%s/%s",unpack_metadata->dir,hinfo->filename);
-                LOGGER_log("%s:%d:%s:DEBUG:REMOVEME: Testing for RFC822 headers in file %s",FL,__func__,hinfo->scratch);
-                if (MIME_is_diskfile_RFC822(hinfo->scratch) > 0 )
-                {
-                    // 20040305-1304:PLD: unpack the file, propagate result upwards
-                    result = MIME_unpack_single_diskfile( unpack_metadata, hinfo->scratch, (hinfo->current_recursion_level+ 1),ss );
-                }
+                // 20040305-1304:PLD: unpack the file, propagate result upwards
+                result = MIME_unpack_single_file( unpack_metadata, decoded_mime->f, (hinfo->current_recursion_level+ 1),ss );
             }
+
+/*
+            snprintf(hinfo->scratch,sizeof(hinfo->scratch),"%s/%s",unpack_metadata->dir,hinfo->filename);
+            LOGGER_log("%s:%d:%s:DEBUG:REMOVEME: Testing for RFC822 headers in file %s",FL,__func__,hinfo->scratch);
+            if (MIME_is_diskfile_RFC822(hinfo->scratch) > 0 )
+            {
+                // 20040305-1304:PLD: unpack the file, propagate result upwards
+                result = MIME_unpack_single_diskfile( unpack_metadata, hinfo->scratch, (hinfo->current_recursion_level+ 1),ss );
+            }
+*/
             break;
         default:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding format is not defined (%d)\n",FL,__func__, hinfo->content_transfer_encoding);
-            result = MIME_decode_raw(input_f, unpack_metadata, hinfo, keep);
+            result = MIME_decode_raw(input_f, unpack_metadata, hinfo, keep, decoded_mime);
             break;
     }
+    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Content-transfer-encoding (%s) end \n",FL,__func__, hinfo->content_transfer_encoding);
     // Analyze our results
     switch (result) {
         case 0:
@@ -2281,7 +2316,7 @@ int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, 
         //      performance of the ripMIME decoding engine
         if (glb.decode_ole > 0)
         {
-            MIME_decode_OLE( unpack_metadata, hinfo, 0 );
+           // MIME_decode_OLE_file( unpack_metadata, decoded_mime->f, 0 );
         }
 #endif
 
