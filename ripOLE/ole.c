@@ -1434,7 +1434,7 @@ int OLE_open_file( struct OLE_object *ole, char *fullpath )
 		return -1;
 	}
 	else
-		return OLE_input_file_data_ini(ole);
+		return OLE_OK;
 }
 
 /*-----------------------------------------------------------------\
@@ -1811,5 +1811,24 @@ int OLE_decode_diskfile( struct OLE_object *ole, char *fname, RIPMIME_output *un
 	result = OLE_open_file( ole, fname );
 	if (result != 0) return result;
 
+	result = OLE_input_file_data_ini(ole);
+	if (result != 0) return result;
+	return OLE_decode( ole, unpack_metadata );
+}
+
+int OLE_decode_file( struct OLE_object *ole, FILE *f, RIPMIME_output *unpack_metadata )
+{
+	int result = 0;
+
+	DOLE LOGGER_log("%s:%d:%s:DEBUG: opening %s", FL,__func__);
+	// Reject any bad paramters.
+	if (ole == NULL) return OLEER_DECODE_NULL_OBJECT;
+	if (f == NULL) return OLEER_DECODE_NULL_FILENAME;
+	if (unpack_metadata == NULL || unpack_metadata->dir == NULL) return OLEER_DECODE_NULL_PATH;
+
+	ole->f = f;
+
+	result = OLE_input_file_data_ini(ole);
+	if (result != 0) return result;
 	return OLE_decode( ole, unpack_metadata );
 }
