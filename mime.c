@@ -1108,7 +1108,7 @@ Input:
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int keep )
+int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int keep, MIME_element* decoded_mime )
 {
     int result = 0;
     int bufsize=1024;
@@ -1212,7 +1212,7 @@ keep : if set, retain the file
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int keep )
+int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int keep, MIME_element* decoded_mime )
 {
     int linecount = 0;                  // The number of lines
     int file_has_uuencode = 0;          // Flag to indicate this text has UUENCODE in it
@@ -1373,7 +1373,7 @@ struct MIMEH_header_info *hinfo: Auxillairy information such as the destination 
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo )
+int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, MIME_element* decoded_mime )
 {
     int i;
     int cr_total = 0;
@@ -1682,7 +1682,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIME_decode_64_cleanup( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo)
+int MIME_decode_64_cleanup( FFGET_FILE *f)
 {
     int result = 0;
     char buffer[128];
@@ -2060,6 +2060,7 @@ int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, 
 {
     int keep = 1;
     int result = -1;
+    MIME_element* decoded_mime = NULL;
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Start:DEBUG: (%s)\n",FL,__func__, hinfo->filename);
 
@@ -2170,7 +2171,7 @@ int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, 
     {
         case _CTRANS_ENCODING_B64:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding BASE64 format\n",FL,__func__);
-            result = MIME_decode_64(input_f, unpack_metadata, hinfo);
+            result = MIME_decode_64(input_f, unpack_metadata, hinfo, decoded_mime);
             switch (result) {
                 case MIME_ERROR_B64_INPUT_STREAM_EOF:
                     break;
@@ -2178,7 +2179,7 @@ int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, 
                     result = 0;
                     break;
                 case 0:
-                    result = MIME_decode_64_cleanup(input_f, unpack_metadata, hinfo);
+                    result = MIME_decode_64_cleanup(input_f);
                     break;
                 default:
                     break;
@@ -2186,20 +2187,20 @@ int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, 
             break;
         case _CTRANS_ENCODING_7BIT:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding 7BIT format\n",FL,__func__);
-            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep);
+            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep, decoded_mime);
             break;
         case _CTRANS_ENCODING_8BIT:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding 8BIT format\n",FL,__func__);
-            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep);
+            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep, decoded_mime);
             break;
         case _CTRANS_ENCODING_BINARY:
         case _CTRANS_ENCODING_RAW:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding RAW format\n",FL,__func__);
-            result = MIME_decode_raw(input_f, unpack_metadata, hinfo, keep);
+            result = MIME_decode_raw(input_f, unpack_metadata, hinfo, keep, decoded_mime);
             break;
         case _CTRANS_ENCODING_QP:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding Quoted-Printable format\n",FL,__func__);
-            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep);
+            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep, decoded_mime);
             break;
         case _CTRANS_ENCODING_UUENCODE:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UUENCODED format\n",FL,__func__);
@@ -2215,17 +2216,17 @@ int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, 
             switch (hinfo->content_disposition) {
                 case _CDISPOSITION_FORMDATA:
                     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UNKNOWN format of FORMDATA disposition\n",FL,__func__);
-                    result = MIME_decode_raw(input_f, unpack_metadata, hinfo, keep);
+                    result = MIME_decode_raw(input_f, unpack_metadata, hinfo, keep, decoded_mime);
                     break;
                 default:
                     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UNKNOWN format\n",FL,__func__);
-                    result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep);
+                    result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep, decoded_mime);
             }
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: UNKNOWN Decode completed, result = %d\n",FL,__func__,result);
             break;
         case _CTRANS_ENCODING_UNSPECIFIED:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UNSPECIFIED format\n",FL,__func__);
-            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep);
+            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep, decoded_mime);
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding result for UNSPECIFIED format = %d\n",FL,__func__, result);
             // 20040114-1236:PLD: Added nested mail checking
             //
@@ -2251,7 +2252,7 @@ int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, 
             break;
         default:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding format is not defined (%d)\n",FL,__func__, hinfo->content_transfer_encoding);
-            result = MIME_decode_raw(input_f, unpack_metadata, hinfo, keep);
+            result = MIME_decode_raw(input_f, unpack_metadata, hinfo, keep, decoded_mime);
             break;
     }
     // Analyze our results
