@@ -494,7 +494,7 @@ int UUENCODE_decode_uu( FFGET_FILE *f, char *out_filename, int decode_whole_file
 
 			if (UUENCODE_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Filename = (%s)\n", FL,__func__, fn);
 
-			cur_mime = MIME_element_add (NULL, unpack_metadata, fn, hinfo->content_type_string, hinfo->content_transfer_encoding_string, hinfo->name, hinfo->current_recursion_level, 1, filecount);
+			cur_mime = MIME_element_add (NULL, unpack_metadata, fn, hinfo->content_type_string, hinfo->content_transfer_encoding_string, hinfo->name, hinfo->current_recursion_level, 1, filecount, __func__);
 
 			// Allocate the write buffer.  By using the write buffer we gain an additional 10% in performance
 			// due to the lack of function call (fwrite) overheads

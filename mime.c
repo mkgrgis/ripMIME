@@ -1127,7 +1127,7 @@ int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIME
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Start\n",FL,__func__);
 
-    cur_mime = MIME_element_add (NULL, unpack_metadata, hinfo->filename, hinfo->content_type_string, hinfo->content_transfer_encoding_string, hinfo->name, hinfo->current_recursion_level, glb.attachment_count, glb.filecount);
+    cur_mime = MIME_element_add (NULL, unpack_metadata, hinfo->filename, hinfo->content_type_string, hinfo->content_transfer_encoding_string, hinfo->name, hinfo->current_recursion_level, glb.attachment_count, glb.filecount, __func__);
 
     while ((readcount=FFGET_raw(f, (unsigned char *) buffer,bufsize)) > 0)
     {
@@ -1225,7 +1225,7 @@ int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIM
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding TEXT [encoding=%d] to %s\n",FL,__func__, hinfo->content_transfer_encoding, hinfo->filename);
 
-    cur_mime = MIME_element_add (NULL, unpack_metadata, hinfo->filename, hinfo->content_type_string, hinfo->content_transfer_encoding_string, hinfo->name, hinfo->current_recursion_level, glb.attachment_count, glb.filecount);
+    cur_mime = MIME_element_add (NULL, unpack_metadata, hinfo->filename, hinfo->content_type_string, hinfo->content_transfer_encoding_string, hinfo->name, hinfo->current_recursion_level, glb.attachment_count, glb.filecount, __func__);
     if (!f)
     {
         /** If we cannot open the file for reading, leave an error and return -1 **/
@@ -1399,7 +1399,7 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: attempting to decode '%s'", FL,__func__, hinfo->filename);
 
-    cur_mime = MIME_element_add (NULL, unpack_metadata, hinfo->filename, hinfo->content_type_string, hinfo->content_transfer_encoding_string, hinfo->name, hinfo->current_recursion_level, glb.attachment_count, glb.filecount);
+    cur_mime = MIME_element_add (NULL, unpack_metadata, hinfo->filename, hinfo->content_type_string, hinfo->content_transfer_encoding_string, hinfo->name, hinfo->current_recursion_level, glb.attachment_count, glb.filecount, __func__);
     if (cur_mime->f == NULL)
     {
         return -1;
@@ -3174,7 +3174,7 @@ int MIME_unpack( RIPMIME_output *unpack_metadata, char *mpname, int current_recu
 void MIME_close(RIPMIME_output *unpack_metadata, int rename_method)
 {
 
-    if (unpack_metadata->unpack_mode == RIPMIME_UNPACK_MODE_EXTRACT_ONE)
+    if (unpack_metadata->unpack_mode == RIPMIME_UNPACK_MODE_IN_MEMORY)
         write_all_to_FS_files(unpack_metadata, rename_method);
 
     if (MIME_DNORMAL) {
@@ -3182,6 +3182,7 @@ void MIME_close(RIPMIME_output *unpack_metadata, int rename_method)
         printArray(all_MIME_elements.mime_arr);
     }
 
-    freeArray(all_MIME_elements.mime_arr);
+    freeArray(all_MIME_elements.mime_arr, unpack_metadata);
 }
 
+/* EOF */

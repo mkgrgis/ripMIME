@@ -266,7 +266,7 @@ int RIPMIME_parse_parameters (struct RIPMIME_globals *glb, int argc, char **argv
 #endif
 
                case 'l':
-                   glb->output->unpack_mode = RIPMIME_UNPACK_MODE_LIST_FILES;
+                   glb->output->unpack_mode = RIPMIME_UNPACK_MODE_LIST_MIME;
                    break;
 
                case 'v':

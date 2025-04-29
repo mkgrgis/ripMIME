@@ -1512,7 +1512,7 @@ Changes:
 \------------------------------------------------------------------*/
 int OLE_store_stream( struct OLE_object *ole, char *stream_name, RIPMIME_output *unpack_metadata, char *stream, size_t stream_size )
 {
-	MIME_element* cur_mime = MIME_element_add (NULL, unpack_metadata, stream_name, "OLE", "OLE", "OLE", 0, 1, 0);
+	MIME_element* cur_mime = MIME_element_add (NULL, unpack_metadata, stream_name, "OLE", "OLE", "OLE", 0, 1, 0, __func__);
 
 	size_t written_bytes = fwrite( stream, 1, stream_size, cur_mime->f );
 	if (written_bytes != stream_size)

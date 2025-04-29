@@ -57,7 +57,7 @@ static char * dup_ini(char* s)
 	return (s != NULL) ? strdup(s) : "\0";
 }
 
-MIME_element* MIME_element_add(struct MIME_element* parent, RIPMIME_output *unpack_metadata, char* filename, char* content_type_string, char* content_transfer_encoding, char* name, int current_recursion_level, int attachment_count, int filecount)
+MIME_element* MIME_element_add(struct MIME_element* parent, RIPMIME_output *unpack_metadata, char* filename, char* content_type_string, char* content_transfer_encoding, char* name, int current_recursion_level, int attachment_count, int filecount, char* func)
 {
 	MIME_element *cur = malloc(sizeof(MIME_element));
 	int fullpath_len = 0;
@@ -76,15 +76,19 @@ MIME_element* MIME_element_add(struct MIME_element* parent, RIPMIME_output *unpa
 
 	cur->fullpath = (char*)malloc(fullpath_len);
 	snprintf(cur->fullpath,fullpath_len,"%s/%s",unpack_metadata->dir,filename);
-	cur->f = fopen(cur->fullpath,"wb");
+	if (unpack_metadata->unpack_mode == RIPMIME_UNPACK_MODE_TO_DIRECTORY)
+		cur->f = fopen(cur->fullpath,"wb");
+	else
+		cur->f = open_memstream (&cur->mem_filearea, &cur->mem_filearea_l);
+
 	if (cur->f == NULL) {
-		LOGGER_log("%s:%d:%s:ERROR: cannot open %s for writing",FL,__func__,cur->fullpath);
+		LOGGER_log("%s:%d:%s:ERROR: cannot open %s for writing",FL,func,cur->fullpath);
 		return cur;
 	}
 
 	if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding [encoding=%d] to %s\n",FL,__func__, content_transfer_encoding, cur->fullpath);
 
-	if (unpack_metadata != NULL && unpack_metadata->unpack_mode == RIPMIME_UNPACK_MODE_LIST_FILES && cur->f != NULL) {
+	if (unpack_metadata != NULL && unpack_metadata->unpack_mode == RIPMIME_UNPACK_MODE_LIST_MIME && cur->f != NULL) {
 		fprintf (stdout, "%d|%d|%d|%d|%s|%s\n", all_MIME_elements.mime_count, attachment_count, filecount, current_recursion_level, cur->content_type_string, cur->filename);
 	}
 	return cur;
@@ -96,14 +100,14 @@ static void dup_free(char *s)
 		free(s);
 }
 
-void MIME_element_deactivate(MIME_element* cur, RIPMIME_output *unpack_metadata)
-{
-	MIME_element_free(cur);
-}
-
 void MIME_element_free (MIME_element* cur)
 {
 	if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:start\n",FL,__func__);
+
+	if (cur == NULL) {
+		if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:NULL, nothing to free\n",FL,__func__);
+		return;
+	}
 
 	if (cur->f != NULL) {
 		fclose(cur->f);
@@ -115,6 +119,13 @@ void MIME_element_free (MIME_element* cur)
 	dup_free(cur->name);
 
 	free(cur);
+	cur == NULL;
+}
+
+void MIME_element_deactivate(MIME_element* cur, RIPMIME_output *unpack_metadata)
+{
+	if (unpack_metadata->unpack_mode == RIPMIME_UNPACK_MODE_TO_DIRECTORY)
+		MIME_element_free(cur);
 }
 
 static inline int get_random_value(void) {
@@ -371,9 +382,13 @@ void printArray(dynamic_array* container)
 }
 
 // Freeing the memory allocated to the array
-void freeArray(dynamic_array* container)
+void freeArray(dynamic_array* container, RIPMIME_output *unpack_metadata)
 {
+	if (unpack_metadata->unpack_mode != RIPMIME_UNPACK_MODE_TO_DIRECTORY)
+		for (int i = 0; i < container->size; i++) {
+			MIME_element_free(container->array[i]);
+		}
 	free(container->array);
 	free(container);
 }
-/*----------END OF MIME.c------------*/
+/*---------- EOF -----------*/

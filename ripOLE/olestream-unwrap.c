@@ -159,7 +159,7 @@ int OLEUNWRAP_save_stream( struct OLEUNWRAP_object *oleuw, char *fname, RIPMIME_
 			,bytes
 			);
 
-	cur_mime = MIME_element_add (NULL, unpack_metadata, fname, "OLE", "OLE", "OLE", 0, 1, 0);
+	cur_mime = MIME_element_add (NULL, unpack_metadata, fname, "OLE", "OLE", "OLE", 0, 1, 0, __func__);
 
 	write_count = fwrite( stream, 1, bytes, cur_mime->f );
 	if (write_count != bytes)

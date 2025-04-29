@@ -5,9 +5,8 @@
 
 /* unpack modes */
 #define RIPMIME_UNPACK_MODE_TO_DIRECTORY	0
-#define RIPMIME_UNPACK_MODE_COUNT_FILES		1
-#define RIPMIME_UNPACK_MODE_LIST_FILES		2
-#define RIPMIME_UNPACK_MODE_EXTRACT_ONE		3
+#define RIPMIME_UNPACK_MODE_IN_MEMORY		1
+#define RIPMIME_UNPACK_MODE_LIST_MIME		2
 
 #define _MIME_RENAME_METHOD_INFIX			1
 #define _MIME_RENAME_METHOD_PREFIX			2
@@ -34,6 +33,8 @@ typedef struct {
 	char* content_type_string;
 	char* content_transfer_encoding;
 	char* name;
+	char* mem_filearea;
+	size_t mem_filearea_l;
 } MIME_element;
 
 typedef struct {
@@ -50,11 +51,21 @@ typedef struct {
 extern all_MIME_elements_s all_MIME_elements;
 
 void all_MIME_elements_init (void);
-MIME_element* MIME_element_add (struct MIME_element* parent, RIPMIME_output *unpack_metadata, char* filename, char* content_type_string, char* content_transfer_encoding, char* name, int current_recursion_level, int attachment_count, int filecount);
+MIME_element* MIME_element_add (
+	struct MIME_element* parent,
+	RIPMIME_output *unpack_metadata,
+	char* filename,
+	char* content_type_string,
+	char* content_transfer_encoding,
+	char* name,
+	int current_recursion_level,
+	int attachment_count,
+	int filecount,
+	char* func);
 // void MIME_element_free (MIME_element* cur);
 void MIME_element_deactivate (MIME_element* cur, RIPMIME_output *unpack_metadata);
 void printArray(dynamic_array* container);
-void freeArray(dynamic_array* container);
+void freeArray(dynamic_array* container, RIPMIME_output *unpack_metadata);
 
 int MIME_test_uniquename( char *path, char *fname, int method );
 

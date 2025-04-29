@@ -735,7 +735,7 @@ int MIMEH_save_doubleCR( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct 
     glb.doubleCR_count++;
     snprintf(glb.doubleCRname,_MIMEH_STRLEN_MAX,"%s/%s_doubleCR.%d_", unpack_metadata->dir, hinfo->filename, glb.doubleCR_count);
 
-    cur_mime = MIME_element_add (NULL, unpack_metadata, glb.doubleCRname, "doubleCR", NULL, "doubleCR", hinfo->current_recursion_level + 1, 0, 0);
+    cur_mime = MIME_element_add (NULL, unpack_metadata, glb.doubleCRname, "doubleCR", NULL, "doubleCR", hinfo->current_recursion_level + 1, 0, 0, __func__);
 
     if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIME_save_doubleCR:DEBUG: Saving DoubleCR header: %s\n", FL,glb.doubleCRname);
     while (1)
