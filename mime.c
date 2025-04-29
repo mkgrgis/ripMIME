@@ -1058,7 +1058,7 @@ int MIME_report_filename_decoded_RIPOLE(char *filename)
 }
 
 /*-----------------------------------------------------------------\
-  Function Name : MIME_decode_OLE
+  Function Name : MIME_decode_OLE_diskfile
   Returns Type  : int
   ----Parameter List
   1. RIPMIME_output *unpack_metadata,
@@ -1074,7 +1074,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIME_decode_OLE( RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int keep )
+int MIME_decode_OLE_diskfile( RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int keep )
 {
     struct OLE_object ole;
     char fullpath[1024];
@@ -2283,7 +2283,7 @@ int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, 
         //      performance of the ripMIME decoding engine
         if (glb.decode_ole > 0)
         {
-            MIME_decode_OLE( unpack_metadata, hinfo, 0 );
+            MIME_decode_OLE_diskfile( unpack_metadata, hinfo, 0 );
         }
 #endif
 
