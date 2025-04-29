@@ -1093,12 +1093,13 @@ int MIME_decode_OLE( RIPMIME_output *unpack_metadata, struct MIMEH_header_info *
     result = OLE_decode_diskfile(&ole, fullpath, unpack_metadata );
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decode done, cleaning up.",FL,__func__);
     OLE_decode_done(&ole);
+    if (ole.f)
+        fclose(ole.f);
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decode returned with code = %d",FL,__func__,result);
     return result;
 }
 #endif
-
 
 
 /*------------------------------------------------------------------------

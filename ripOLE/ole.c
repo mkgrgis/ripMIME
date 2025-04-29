@@ -1545,8 +1545,6 @@ Changes:
 \------------------------------------------------------------------*/
 void OLE_decode_done( struct OLE_object *ole )
 {
-	DOLE LOGGER_log("%s:%d:%s:DEBUG: ole->f close",FL,__func__);
-	if (ole->f) fclose(ole->f);
 	/** Why weren't these active? (they were commented out ) **/
 	DOLE LOGGER_log("%s:%d:%s:DEBUG: OLE FAT",FL,__func__);
 	if (ole->FAT) free(ole->FAT);
@@ -1576,6 +1574,8 @@ Changes:
 int OLE_terminate_and_return( struct OLE_object *ole, int result )
 {
 	OLE_decode_done(ole);
+	DOLE LOGGER_log("%s:%d:%s:DEBUG: ole->f close",FL,__func__);
+	if (ole->f) fclose(ole->f);
 	return result;
 }
 
