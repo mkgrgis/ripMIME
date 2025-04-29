@@ -59,12 +59,12 @@
 #include "logger.h"
 
 
-int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int current_recursion_level, struct SS_object *ss );
+int MIME_unpack_stage2( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int current_recursion_level, struct SS_object *ss );
 int MIME_unpack_single_diskfile( RIPMIME_output *unpack_metadata, char *mpname, int current_recursion_level, struct SS_object *ss );
 int MIME_unpack_single_file( RIPMIME_output *unpack_metadata, FILE *fi, int current_recursion_level, struct SS_object *ss );
 int MIME_unpack_mailbox( RIPMIME_output *unpack_metadata, char *mpname, int current_recursion_level, struct SS_object *ss );
-int MIME_handle_multipart( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss );
-int MIME_handle_rfc822( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss );
+int MIME_handle_multipart( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss );
+int MIME_handle_rfc822( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss );
 
 // Predefined filenames
 #define MIME_BLANKZONE_FILENAME_DEFAULT "_blankzone_"
@@ -2050,13 +2050,13 @@ int MIME_generate_multiple_hardlink_filenames(struct MIMEH_header_info *hinfo, R
 /*------------------------------------------------------------------------
 Procedure:     MIME_decode_encoding ID:1
 Purpose:       Based on the contents of hinfo, this function will call the
-required function needed to decode the contents of the file
-which is contained within the MIME structure
+               required function needed to decode the contents of the file
+               which is contained within the MIME structure
 Input:
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_decode_encoding( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, struct SS_object *ss )
+int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, struct SS_object *ss )
 {
     int keep = 1;
     int result = -1;
@@ -2170,7 +2170,7 @@ int MIME_decode_encoding( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct
     {
         case _CTRANS_ENCODING_B64:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding BASE64 format\n",FL,__func__);
-            result = MIME_decode_64(f, unpack_metadata, hinfo);
+            result = MIME_decode_64(input_f, unpack_metadata, hinfo);
             switch (result) {
                 case MIME_ERROR_B64_INPUT_STREAM_EOF:
                     break;
@@ -2178,7 +2178,7 @@ int MIME_decode_encoding( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct
                     result = 0;
                     break;
                 case 0:
-                    result = MIME_decode_64_cleanup(f, unpack_metadata, hinfo);
+                    result = MIME_decode_64_cleanup(input_f, unpack_metadata, hinfo);
                     break;
                 default:
                     break;
@@ -2186,26 +2186,26 @@ int MIME_decode_encoding( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct
             break;
         case _CTRANS_ENCODING_7BIT:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding 7BIT format\n",FL,__func__);
-            result = MIME_decode_text(f, unpack_metadata, hinfo, keep);
+            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep);
             break;
         case _CTRANS_ENCODING_8BIT:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding 8BIT format\n",FL,__func__);
-            result = MIME_decode_text(f, unpack_metadata, hinfo, keep);
+            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep);
             break;
         case _CTRANS_ENCODING_BINARY:
         case _CTRANS_ENCODING_RAW:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding RAW format\n",FL,__func__);
-            result = MIME_decode_raw(f, unpack_metadata, hinfo, keep);
+            result = MIME_decode_raw(input_f, unpack_metadata, hinfo, keep);
             break;
         case _CTRANS_ENCODING_QP:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding Quoted-Printable format\n",FL,__func__);
-            result = MIME_decode_text(f, unpack_metadata, hinfo, keep);
+            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep);
             break;
         case _CTRANS_ENCODING_UUENCODE:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UUENCODED format\n",FL,__func__);
             // Added as a test - remove if we can get this to work in a better way
             snprintf(hinfo->uudec_name,sizeof(hinfo->uudec_name),"%s",hinfo->filename);
-            result = UUENCODE_decode_uu(f, hinfo->uudec_name, 0, keep, unpack_metadata, hinfo );
+            result = UUENCODE_decode_uu(input_f, hinfo->uudec_name, 0, keep, unpack_metadata, hinfo );
             glb.attachment_count += result;
             // Because this is a file-count, it's not really an 'error result' as such, so, set the
             //      return code back to 0!
@@ -2215,17 +2215,17 @@ int MIME_decode_encoding( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct
             switch (hinfo->content_disposition) {
                 case _CDISPOSITION_FORMDATA:
                     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UNKNOWN format of FORMDATA disposition\n",FL,__func__);
-                    result = MIME_decode_raw(f, unpack_metadata, hinfo, keep);
+                    result = MIME_decode_raw(input_f, unpack_metadata, hinfo, keep);
                     break;
                 default:
                     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UNKNOWN format\n",FL,__func__);
-                    result = MIME_decode_text(f, unpack_metadata, hinfo, keep);
+                    result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep);
             }
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: UNKNOWN Decode completed, result = %d\n",FL,__func__,result);
             break;
         case _CTRANS_ENCODING_UNSPECIFIED:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UNSPECIFIED format\n",FL,__func__);
-            result = MIME_decode_text(f, unpack_metadata, hinfo, keep);
+            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep);
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding result for UNSPECIFIED format = %d\n",FL,__func__, result);
             // 20040114-1236:PLD: Added nested mail checking
             //
@@ -2251,7 +2251,7 @@ int MIME_decode_encoding( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct
             break;
         default:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding format is not defined (%d)\n",FL,__func__, hinfo->content_transfer_encoding);
-            result = MIME_decode_raw(f, unpack_metadata, hinfo, keep);
+            result = MIME_decode_raw(input_f, unpack_metadata, hinfo, keep);
             break;
     }
     // Analyze our results
@@ -2267,8 +2267,8 @@ int MIME_decode_encoding( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct
         case MIME_ERROR_RECURSION_LIMIT_REACHED:
             return result;
             break;
-		  default:
-				return result;
+        default:
+            return result;
     }
 
     if ((result != -1)&&(result != MIME_STATUS_ZERO_FILE))
@@ -2359,7 +2359,7 @@ int MIME_postdecode_cleanup( RIPMIME_output *unpack_metadata, struct SS_object *
   Function Name : MIME_handle_multipart
   Returns Type  : int
   ----Parameter List
-  1. FFGET_FILE *f,
+  1. FFGET_FILE *input_f,
   2.  RIPMIME_output *unpack_metadata,
   3.  struct MIMEH_header_info *hinfo,
   4.  int current_recursion_level,
@@ -2374,7 +2374,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIME_handle_multipart( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss )
+int MIME_handle_multipart( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss )
 {
     int result = 0;
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding multipart/embedded \n",FL,__func__);
@@ -2394,12 +2394,12 @@ int MIME_handle_multipart( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struc
         //      headers and decodes.
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Non base64 encoding AND no filename, embedded message\n",FL,__func__);
         h->boundary_located = 0;
-        result = MIME_unpack_stage2(f, unpack_metadata, h, current_recursion_level , ss);
+        result = MIME_unpack_stage2(input_f, unpack_metadata, h, current_recursion_level , ss);
         p = BS_top();
         if (p) PLD_strncpy(h->boundary, p,sizeof(h->boundary));
     } else {
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Embedded message has a filename, decoding to file %s",FL,__func__,h->filename);
-        result = MIME_decode_encoding( f, unpack_metadata, h, ss );
+        result = MIME_decode_encoding( input_f, unpack_metadata, h, ss );
         if (result == 0)
         {
             char * fn;
@@ -2425,7 +2425,7 @@ int MIME_handle_multipart( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struc
   Function Name : MIME_handle_rfc822
   Returns Type  : int
   ----Parameter List
-  1. FFGET_FILE *f,                         Input stream
+  1. FFGET_FILE *input_f,                         Input stream
   2.  RIPMIME_output *unpack_metadata,                      Directory to write files to
   3.  struct MIMEH_header_info *hinfo, Header information structure
   4.  int current_recursion_level,      Current recursion level
@@ -2440,9 +2440,9 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIME_handle_rfc822( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss )
+int MIME_handle_rfc822( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss )
 {
-    /** Decode a RFC822 encoded stream of data from *f  **/
+    /** Decode a RFC822 encoded stream of data from *input_f  **/
     int result = 0;
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding RFC822 message\n",FL,__func__);
     /** If there is no filename, then we have a "standard"
@@ -2465,13 +2465,13 @@ int MIME_handle_rfc822( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
         //      headers and decodes.
         DMIME LOGGER_log("%s:%d:%s:DEBUG: Non base64 encoding AND no filename, embedded message\n",FL,__func__);
         h->boundary_located = 0;
-        result = MIME_unpack_stage2(f, unpack_metadata, h, current_recursion_level , ss);
+        result = MIME_unpack_stage2(input_f, unpack_metadata, h, current_recursion_level , ss);
         p = BS_top();
         if (p) PLD_strncpy(h->boundary, p,sizeof(h->boundary));
     } else {
         /** ...else... if the section has a filename or B64 type encoding, we need to put it through extra decoding **/
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Embedded message has a filename, decoding to file %s",FL,__func__,h->filename);
-        result = MIME_decode_encoding( f, unpack_metadata, h, ss );
+        result = MIME_decode_encoding( input_f, unpack_metadata, h, ss );
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Result of extracting %s is %d",FL,__func__,h->filename, result);
         if (result == 0) {
             char * fn;
@@ -2498,7 +2498,7 @@ int MIME_handle_rfc822( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
   Function Name : MIME_handle_plain
   Returns Type  : int
   ----Parameter List
-  1. FFGET_FILE *f,
+  1. FFGET_FILE *input_f,
   2.  RIPMIME_output *unpack_metadata,
   3.  struct MIMEH_header_info *h,
   4.  int current_recursion_level,
@@ -2513,12 +2513,12 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIME_handle_plain( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss )
+int MIME_handle_plain( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss )
 {
-    /** Handle a plain text encoded data stream from *f **/
+    /** Handle a plain text encoded data stream from *input_f **/
     int result = 0;
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Handling plain email",FL,__func__);
-    result = MIME_decode_encoding( f, unpack_metadata, h, ss );
+    result = MIME_decode_encoding( input_f, unpack_metadata, h, ss );
     if ((result == MIME_ERROR_FFGET_EMPTY)||(result == 0))
     {
         /** Test for RFC822 content... if so, go decode it **/
@@ -2542,7 +2542,7 @@ Input:
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int current_recursion_level, struct SS_object *ss )
+int MIME_unpack_stage2( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int current_recursion_level, struct SS_object *ss )
 {
     int result = 0;
     struct MIMEH_header_info *h;
@@ -2564,7 +2564,7 @@ int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
     /** 20041216-1102:PLD: Keep attempting to read headers until we get a sane set **/
     do {
         /** Read next set of headers, repeat until a sane set of headers are found **/
-        result = MIMEH_parse_headers(f,h,unpack_metadata->dir);
+        result = MIMEH_parse_headers(input_f,h,unpack_metadata->dir);
         DMIME LOGGER_log("%s:%d:%s:DEBUG: Parsing of headers done, sanity = %d, result = %d",FL,__func__,h->sanity, result);
     } while ((h->sanity == 0)&&(result != -1));
 
@@ -2626,14 +2626,14 @@ int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
         {
             // Pass off to the RFC822 handler
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding with RFC822 decoder\n",FL,__func__);
-            result = MIME_handle_rfc822(f,unpack_metadata,h,current_recursion_level,ss);
+            result = MIME_handle_rfc822(input_f,unpack_metadata,h,current_recursion_level,ss);
         } else if (MIMEH_is_contenttype(_CTYPE_MULTIPART, h->content_type)) {
             // Pass off to the multipart handler
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding with Multipart decoder\n",FL,__func__);
-            result = MIME_handle_multipart(f,unpack_metadata,h,current_recursion_level,ss);
+            result = MIME_handle_multipart(input_f,unpack_metadata,h,current_recursion_level,ss);
         } else {
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding boundaryless file (%s)...\n",FL,__func__,h->filename);
-            result = MIME_handle_plain( f, unpack_metadata,h,current_recursion_level,ss);
+            result = MIME_handle_plain( input_f, unpack_metadata,h,current_recursion_level,ss);
         } // else-if content was RFC822 or multi-part
         return result;
     } // End of the boundary-LESS mode ( processing the mail which has no boundaries in the primary headers )
@@ -2646,7 +2646,7 @@ int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
         // Decode the data in the current MIME segment
         // based on the header information retrieved from
         // the start of this function.
-        result = MIME_decode_encoding(f, unpack_metadata, h, ss);
+        result = MIME_decode_encoding(input_f, unpack_metadata, h, ss);
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Done decoding, result = %d",FL,__func__,result);
         if (result == 0)
         {
@@ -2665,7 +2665,7 @@ int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
 
                     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding headers...\n",FL,__func__);
                     do {
-                        result = MIMEH_parse_headers(f,h,unpack_metadata->dir);
+                        result = MIMEH_parse_headers(input_f,h,unpack_metadata->dir);
                     } while ((h->sanity == 0)&&(result != -1));
 
                     glb.header_defect_count += MIMEH_get_defect_count(h);
@@ -2712,9 +2712,9 @@ int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
                                 // however, it is a rather robust/reliable way.
                                 if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Chose Content-type == RFC822 clause",FL,__func__);
                                 if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Calling MIME_decode_encoding()",FL,__func__);
-                                result = MIME_handle_rfc822(f,unpack_metadata,h,current_recursion_level,ss);
+                                result = MIME_handle_rfc822(input_f,unpack_metadata,h,current_recursion_level,ss);
                                 // First up - extract the RFC822 body out of the parent mailpack
-                                // XX result = MIME_decode_encoding( f, unpackdir, h, ss );
+                                // XX result = MIME_decode_encoding( input_f, unpackdir, h, ss );
 
                                 // Now decode the RFC822 body.
                                 /**
@@ -2739,7 +2739,7 @@ int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
                                 // they are.  Shame on me for not remembering, in future I must comment more.
                                 if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: NON-BASE64 DECODE\n",FL,__func__);
                                 h->boundary_located = 0;
-                                result = MIME_unpack_stage2(f, unpack_metadata, h, current_recursion_level , ss);
+                                result = MIME_unpack_stage2(input_f, unpack_metadata, h, current_recursion_level , ss);
 
                                 // When we've exited from decoding the sub-mailpack, we need to restore the original
                                 // boundary
@@ -2756,11 +2756,11 @@ int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
                             //      layout of other nested emails
 
                             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Handle Appledouble explicitly",FL,__func__);
-                            result = MIME_unpack_stage2(f, unpack_metadata, h, current_recursion_level , ss);
+                            result = MIME_unpack_stage2(input_f, unpack_metadata, h, current_recursion_level , ss);
 
                         } else {
                             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: RFC822 Message to be decoded...\n",FL,__func__);
-                            result = MIME_decode_encoding( f, unpack_metadata, h, ss );
+                            result = MIME_decode_encoding( input_f, unpack_metadata, h, ss );
                             if (result != 0) return result; // 20040305-1313:PLD
                             else
                             {
@@ -2784,7 +2784,7 @@ int MIME_unpack_stage2( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct M
                             // multipart or RFC822 embedded email, we can then simply use
                             // the normal decoding function to interpret its data.
                             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding a normal attachment \n",FL,__func__);
-                            result = MIME_decode_encoding( f, unpack_metadata, h, ss );
+                            result = MIME_decode_encoding( input_f, unpack_metadata, h, ss );
 
                             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding a normal attachment '%s' done. \n",FL,__func__, h->filename);
                             // See if we have an attachment output which is actually another
@@ -2837,7 +2837,7 @@ Errors:
 ------------------------------------------------------------------------*/
 int MIME_unpack_mailbox( RIPMIME_output *unpack_metadata, char *mpname, int current_recursion_level, struct SS_object *ss )
 {
-    FFGET_FILE f;
+    FFGET_FILE input_f;
     FILE *fi;
     FILE *fo;
     char fname[1024];
@@ -2868,8 +2868,8 @@ int MIME_unpack_mailbox( RIPMIME_output *unpack_metadata, char *mpname, int curr
         return -1;
     }
 
-    FFGET_setstream(&f, fi);
-    while (FFGET_fgets(line,sizeof(line),&f))
+    FFGET_setstream(&input_f, fi);
+    while (FFGET_fgets(line,sizeof(line),&input_f))
     {
         // If we have the construct of "\n\rFrom ", then we
         //      can be -pretty- sure that a new email is about
