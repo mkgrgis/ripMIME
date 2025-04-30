@@ -59,6 +59,10 @@
 
 char *MIMEH_defect_description_array[_MIMEH_DEFECT_ARRAY_SIZE];
 
+int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MIMEH_header_info *hinfo, FFGET_FILE *f, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers, char* headerline );
+int MIMEH_headers_get(FILE* header_file, FILE* original_header_file, struct MIMEH_header_info *hinfo, FFGET_FILE *f, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers, char* headerline );
+int MIMEH_read_primary_headers( FILE* header_file, FILE* original_header_file, char *fname, struct MIMEH_header_info *hinfo, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers );
+
 struct MIMEH_globals {
     int doubleCR;
     int doubleCR_save;
@@ -880,7 +884,7 @@ Input:
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MIMEH_header_info *hinfo, FFGET_FILE *f, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers )
+int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MIMEH_header_info *hinfo, FFGET_FILE *f, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers, char* headerline )
 {
     char buffer[_MIMEH_STRLEN_MAX+1];
     int totalsize=0;
@@ -2707,7 +2711,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIMEH_headers_get(FILE* header_file, FILE* original_header_file,  struct MIMEH_header_info *hinfo, FFGET_FILE *f, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers )
+int MIMEH_headers_get(FILE* header_file, FILE* original_header_file,  struct MIMEH_header_info *hinfo, FFGET_FILE *f, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers, char* headerline )
 {
     int result = 0;
 
@@ -2748,7 +2752,7 @@ int MIMEH_headers_get(FILE* header_file, FILE* original_header_file,  struct MIM
     // Read from the file, the headers we need
     FFGET_set_watch_SDL(1);
 
-    result = MIMEH_read_headers(header_file, original_header_file, hinfo, f, unpack_metadata, save_headers_original, save_headers);
+    result = MIMEH_read_headers(header_file, original_header_file, hinfo, f, unpack_metadata, save_headers_original, save_headers, glb.headerline);
     FFGET_set_watch_SDL(0);
 
     if (hinfo->lf_count > hinfo->crlf_count) {
@@ -2804,7 +2808,7 @@ int MIMEH_parse_headers( FILE* header_file, FILE* original_header_file, FFGET_FI
 
     /** Proceed to read, process and finish headers **/
     DMIMEH LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: Getting headers",FL);
-    if ( result == 0 ) result = MIMEH_headers_get( header_file, original_header_file, hinfo, f, unpack_metadata, save_headers_original, save_headers);
+    if ( result == 0 ) result = MIMEH_headers_get( header_file, original_header_file, hinfo, f, unpack_metadata, save_headers_original, save_headers, glb.headerline);
     DMIMEH LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: Processing headers",FL);
     if ( result == 0 ) result = MIMEH_headers_process( hinfo, glb.headerline );
     DMIMEH LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: cleanup of headers",FL);
