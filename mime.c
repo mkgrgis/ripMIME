@@ -2602,7 +2602,7 @@ int MIME_unpack_stage2( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, st
     /** 20041216-1102:PLD: Keep attempting to read headers until we get a sane set **/
     do {
         /** Read next set of headers, repeat until a sane set of headers are found **/
-        result = MIMEH_parse_headers(input_f,h,unpack_metadata->dir);
+        result = MIMEH_parse_headers(NULL, NULL, input_f,h,unpack_metadata->dir, 0);
         DMIME LOGGER_log("%s:%d:%s:DEBUG: Parsing of headers done, sanity = %d, result = %d",FL,__func__,h->sanity, result);
     } while ((h->sanity == 0)&&(result != -1));
 
@@ -2703,7 +2703,7 @@ int MIME_unpack_stage2( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, st
 
                     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding headers...\n",FL,__func__);
                     do {
-                        result = MIMEH_parse_headers(input_f,h,unpack_metadata->dir);
+                        result = MIMEH_parse_headers(NULL, NULL, input_f, h, unpack_metadata->dir, 0);
                     } while ((h->sanity == 0)&&(result != -1));
 
                     glb.header_defect_count += MIMEH_get_defect_count(h);
@@ -3053,6 +3053,7 @@ int MIME_unpack_single_file( RIPMIME_output *unpack_metadata, FILE *fi, int curr
 
     FFGET_FILE f;
     FILE *hf = NULL;
+    h.header_file = NULL;
     // Because this MIME module gets used in both CLI and daemon modes
     //  we should check to see that we can report to stderr
     //
@@ -3064,7 +3065,8 @@ int MIME_unpack_single_file( RIPMIME_output *unpack_metadata, FILE *fi, int curr
         return MIME_ERROR_RECURSION_LIMIT_REACHED; // 20040305-1302:PLD
         //return 0; // 20040208-1723:PLD
     }
-    else h.current_recursion_level = current_recursion_level;
+    else
+        h.current_recursion_level = current_recursion_level;
     glb.current_line = 0;
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: recursion level checked...%d\n",FL,__func__, current_recursion_level);
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: DumpHeaders = %d\n",FL,__func__, glb.save_headers);
@@ -3086,7 +3088,7 @@ int MIME_unpack_single_file( RIPMIME_output *unpack_metadata, FILE *fi, int curr
         else
         {
             headers_save_set_here = 1;
-            MIMEH_set_headers_save(hf);
+            h.header_file = hf;
         }
         free(fn);
     }
@@ -3122,7 +3124,7 @@ int MIME_unpack_single_file( RIPMIME_output *unpack_metadata, FILE *fi, int curr
     {
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Closing header file.\n",FL,__func__);
         fflush(stdout);
-        MIMEH_set_headers_nosave();
+        h.header_file = NULL;
         fclose(hf);
     }
 
