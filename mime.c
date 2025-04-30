@@ -1099,6 +1099,28 @@ int MIME_decode_OLE_diskfile( RIPMIME_output *unpack_metadata, struct MIMEH_head
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decode returned with code = %d",FL,__func__,result);
     return result;
 }
+
+int MIME_decode_OLE_file( RIPMIME_output *unpack_metadata, FILE *f, int keep )
+{
+    struct OLE_object ole;
+    int result;
+
+    OLE_init(&ole);
+    OLE_set_quiet(&ole,glb.quiet);
+    OLE_set_verbose(&ole,glb.verbosity);
+    OLE_set_debug(&ole,glb.debug);
+    OLE_set_save_unknown_streams(&ole,0);
+    OLE_set_filename_report_fn(&ole, MIME_report_filename_decoded_RIPOLE );
+
+    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Starting OLE Decode",FL,__func__);
+    result = OLE_decode_file(&ole, f, unpack_metadata );
+    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decode done, cleaning up.",FL,__func__);
+    OLE_decode_done(&ole);
+    if (ole.f)
+        fseek(ole.f, 0, SEEK_SET);
+    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decode returned with code = %d",FL,__func__,result);
+    return result;
+}
 #endif
 
 
@@ -2240,16 +2262,17 @@ int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, 
             //      because dud headers will always result in a UNSPECIFIED encoding
             //
             //  Original sample mailpack was sent by Farit - thanks.
-            if (1)
+            char *fn;
+            int fn_l = strlen(unpack_metadata->dir) + strlen(hinfo->filename) + sizeof(char) * 2;
+            fn = malloc(fn_l);
+            snprintf(fn,fn_l,"%s/%s",unpack_metadata->dir,hinfo->filename);
+            LOGGER_log("%s:%d:%s:DEBUG:REMOVEME: Testing for RFC822 headers in file %s",FL,__func__,fn);
+            if (MIME_is_diskfile_RFC822(fn) > 0 )
             {
-                snprintf(hinfo->scratch,sizeof(hinfo->scratch),"%s/%s",unpack_metadata->dir,hinfo->filename);
-                LOGGER_log("%s:%d:%s:DEBUG:REMOVEME: Testing for RFC822 headers in file %s",FL,__func__,hinfo->scratch);
-                if (MIME_is_diskfile_RFC822(hinfo->scratch) > 0 )
-                {
-                    // 20040305-1304:PLD: unpack the file, propagate result upwards
-                    result = MIME_unpack_single_diskfile( unpack_metadata, hinfo->scratch, (hinfo->current_recursion_level+ 1),ss );
-                }
+                // 20040305-1304:PLD: unpack the file, propagate result upwards
+                result = MIME_unpack_single_diskfile( unpack_metadata, fn, (hinfo->current_recursion_level+ 1),ss );
             }
+            free(fn);   
             break;
         default:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding format is not defined (%d)\n",FL,__func__, hinfo->content_transfer_encoding);
@@ -2309,12 +2332,17 @@ int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, 
         {
             if (glb.decode_mht != 0)
             {
+                char *fn;
+                int fn_l = strlen(unpack_metadata->dir) + strlen(hinfo->filename) + sizeof(char) * 2;
+
                 //  Patched 26-01-03: supplied by Chris Hine
                 if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Microsoft MHT format email filename='%s'\n",FL,__func__, hinfo->filename);
-                snprintf(hinfo->scratch,sizeof(hinfo->scratch),"%s/%s",unpack_metadata->dir,hinfo->filename);
+                fn = malloc(fn_l);
+                snprintf(fn,fn_l,"%s/%s",unpack_metadata->dir,hinfo->filename);
 
                 // 20040305-1304:PLD: unpack the file, propagate result upwards
-                result = MIME_unpack_single_diskfile( unpack_metadata, hinfo->scratch, (hinfo->current_recursion_level+ 1),ss );
+                result = MIME_unpack_single_diskfile( unpack_metadata, fn, (hinfo->current_recursion_level+ 1),ss );
+                free(fn);
             }
         } // Decode MHT files
     } // If result != -1
@@ -2334,9 +2362,7 @@ Errors:
 ------------------------------------------------------------------------*/
 int MIME_postdecode_cleanup( RIPMIME_output *unpack_metadata, struct SS_object *ss )
 {
-    char fullpath[256];
-    int result;
-    result = 0;
+    int result = 0;
     do {
         char *filename;
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s Popping file...",FL,__func__);
@@ -2345,13 +2371,18 @@ int MIME_postdecode_cleanup( RIPMIME_output *unpack_metadata, struct SS_object *
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s Popped file '%s'",FL,__func__, filename);
         if ( strncmp( glb.blankfileprefix, filename, strlen( glb.blankfileprefix ) ) == 0 )
         {
-            snprintf( fullpath, sizeof(fullpath), "%s/%s", unpack_metadata->dir, filename );
-            result = unlink( fullpath );
+            char *fn;
+            int fn_l = strlen(unpack_metadata->dir) + strlen(filename) + sizeof(char) * 2;
+
+            snprintf(fn,fn_l,"%s/%s",unpack_metadata->dir,filename);
+
+            result = unlink( fn );
             if (MIME_VERBOSE)
             {
-                if (result == -1) LOGGER_log("Error removing '%s'; %s", fullpath, strerror(errno));
-                else LOGGER_log("Removed %s [status = %d]\n", fullpath, result );
+                if (result == -1) LOGGER_log("Error removing '%s'; %s", fn, strerror(errno));
+                else LOGGER_log("Removed %s [status = %d]\n", fn, result );
             }
+            free(fn);
         }
     } while (1);
     return 0;
@@ -2404,7 +2435,7 @@ int MIME_handle_multipart( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata,
         result = MIME_decode_encoding( input_f, unpack_metadata, h, ss );
         if (result == 0)
         {
-            char * fn;
+            char *fn;
             int fn_l = strlen(unpack_metadata->dir) + strlen(h->filename) + sizeof(char) * 2;
 
             fn = malloc(fn_l);
@@ -2524,14 +2555,18 @@ int MIME_handle_plain( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, str
     if ((result == MIME_ERROR_FFGET_EMPTY)||(result == 0))
     {
         /** Test for RFC822 content... if so, go decode it **/
-        snprintf(h->scratch,sizeof(h->scratch),"%s/%s",unpack_metadata->dir,h->filename);
-        if (MIME_is_diskfile_RFC822(h->scratch)==1)
+        char *fn;
+        int fn_l = strlen(unpack_metadata->dir) + strlen(h->filename) + sizeof(char) * 2;
+        fn = malloc(fn_l);
+        snprintf(fn,fn_l,"%s/%s",unpack_metadata->dir,h->filename);
+        if (MIME_is_diskfile_RFC822(fn)==1)
         {
             /** If the file is RFC822, then decode it using MIME_unpack_single_diskfile() **/
             if (glb.header_longsearch != 0) MIMEH_set_header_longsearch(glb.header_longsearch);
-            result = MIME_unpack_single_diskfile( unpack_metadata, h->scratch, current_recursion_level, ss );
+            result = MIME_unpack_single_diskfile( unpack_metadata, fn, current_recursion_level, ss );
             if (glb.header_longsearch != 0) MIMEH_set_header_longsearch(0);
         }
+        free(fn);
     }
     return result;
 }

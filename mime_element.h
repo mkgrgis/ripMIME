@@ -50,6 +50,8 @@ typedef struct {
 
 extern all_MIME_elements_s all_MIME_elements;
 
+int MIMEELEMENT_set_debug( int level );
+
 void all_MIME_elements_init (void);
 MIME_element* MIME_element_add (
 	struct MIME_element* parent,
@@ -61,7 +63,7 @@ MIME_element* MIME_element_add (
 	int current_recursion_level,
 	int attachment_count,
 	int filecount,
-	char* func);
+	const char* func);
 // void MIME_element_free (MIME_element* cur);
 void MIME_element_deactivate (MIME_element* cur, RIPMIME_output *unpack_metadata);
 void printArray(dynamic_array* container);

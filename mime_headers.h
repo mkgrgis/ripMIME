@@ -97,7 +97,6 @@
 
 struct MIMEH_header_info
 {
-	char scratch[_MIMEH_STRLEN_MAX + 1];
 	int content_type;
 	char content_type_string[ _MIMEH_CONTENT_TYPE_MAX + 1 ];
 	char content_description_string[ _MIMEH_CONTENT_DESCRIPTION_MAX + 1 ];

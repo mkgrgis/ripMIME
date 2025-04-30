@@ -57,7 +57,9 @@ static char * dup_ini(char* s)
 	return (s != NULL) ? strdup(s) : "\0";
 }
 
-MIME_element* MIME_element_add(struct MIME_element* parent, RIPMIME_output *unpack_metadata, char* filename, char* content_type_string, char* content_transfer_encoding, char* name, int current_recursion_level, int attachment_count, int filecount, char* func)
+MIME_element* MIME_element_add(struct MIME_element* parent, RIPMIME_output *unpack_metadata,
+							   char* filename, char* content_type_string, char* content_transfer_encoding, char* name,
+							   int current_recursion_level, int attachment_count, int filecount, const char* func)
 {
 	MIME_element *cur = malloc(sizeof(MIME_element));
 	int fullpath_len = 0;
