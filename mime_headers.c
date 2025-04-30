@@ -70,7 +70,6 @@ struct MIMEH_globals {
 
     char *headerline;
     char *headerline_original;  // Holds the original header-form without decoding.
-    int save_headers;
     int test_mailbox;
     int debug;
     int webform;
@@ -127,7 +126,6 @@ void MIMEH_init( void )
     glb.headerline = NULL;
     glb.headerline_original = NULL;
 
-    glb.save_headers = 0;
     glb.test_mailbox = 0;
     glb.debug = 0;
     glb.webform = 0;
@@ -388,28 +386,6 @@ int MIMEH_get_verbosity_contenttype( void )
 {
     return glb.verbose_contenttype;
 }
-
-
-/*-----------------------------------------------------------------\
-  Function Name : MIMEH_get_headers_save
-  Returns Type  : int
-  ----Parameter List
-  1. void ,
-  ------------------
-  Exit Codes    :
-  Side Effects  :
-  --------------------------------------------------------------------
-Comments:
-
---------------------------------------------------------------------
-Changes:
-
-\------------------------------------------------------------------*/
-int MIMEH_get_headers_save( void )
-{
-    return glb.save_headers;
-}
-
 
 /*-----------------------------------------------------------------\
   Function Name : MIMEH_get_headers_ptr
@@ -946,7 +922,7 @@ Input:
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MIMEH_header_info *hinfo, FFGET_FILE *f, RIPMIME_output *unpack_metadata, int save_headers_original )
+int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MIMEH_header_info *hinfo, FFGET_FILE *f, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers )
 {
     char buffer[_MIMEH_STRLEN_MAX+1];
     int totalsize=0;
@@ -1103,7 +1079,7 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
                 MIMEH_fix_header_mistakes( glb.headerline );
                 MDECODE_decode_ISO( glb.headerline, totalsize  );
 
-                if ((glb.save_headers)&&(glb.headerline))
+                if ((save_headers)&&(glb.headerline))
                 {
                     if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIME_read_headers:DEBUG: Saving header line.",FL);
                     fprintf(hinfo->header_file,"%s",glb.headerline);
@@ -1140,9 +1116,9 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
             if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIME_read_headers:ERROR: FFGET module ran out of input while reading headers",FL);
             /** If we're meant to be saving the headers, we better do that now, even though we couldn't
              ** read everything we wanted to **/
-            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIME_read_headers:DEBUG: save_headers=%d totalsize=%d headerline=%s", FL, glb.save_headers, totalsize, glb.headerline);
+            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIME_read_headers:DEBUG: save_headers=%d totalsize=%d headerline=%s", FL, save_headers, totalsize, glb.headerline);
 
-            if ((glb.save_headers)&&(glb.headerline))
+            if ((save_headers)&&(glb.headerline))
             {
                 if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIME_read_headers:DEBUG: Saving header line.",FL);
                 MIMEH_fix_header_mistakes( glb.headerline );
@@ -2763,7 +2739,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIMEH_headers_get(FILE* header_file, FILE* original_header_file,  struct MIMEH_header_info *hinfo, FFGET_FILE *f, RIPMIME_output *unpack_metadata, int save_headers_original )
+int MIMEH_headers_get(FILE* header_file, FILE* original_header_file,  struct MIMEH_header_info *hinfo, FFGET_FILE *f, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers )
 {
     int result = 0;
 
@@ -2804,7 +2780,7 @@ int MIMEH_headers_get(FILE* header_file, FILE* original_header_file,  struct MIM
     // Read from the file, the headers we need
     FFGET_set_watch_SDL(1);
 
-    result = MIMEH_read_headers(header_file, original_header_file, hinfo, f, unpack_metadata, save_headers_original);
+    result = MIMEH_read_headers(header_file, original_header_file, hinfo, f, unpack_metadata, save_headers_original, save_headers);
     FFGET_set_watch_SDL(0);
 
     if (hinfo->lf_count > hinfo->crlf_count) {
@@ -2878,7 +2854,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIMEH_parse_headers( FILE* header_file, FILE* original_header_file, FFGET_FILE *f, struct MIMEH_header_info *hinfo, RIPMIME_output *unpack_metadata, int save_headers_original )
+int MIMEH_parse_headers( FILE* header_file, FILE* original_header_file, FFGET_FILE *f, struct MIMEH_header_info *hinfo, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers )
 {
     int result = 0;
     DMIMEH LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: Start [F=%p, hinfo=%p]\n", FL, f, hinfo);
@@ -2888,7 +2864,7 @@ int MIMEH_parse_headers( FILE* header_file, FILE* original_header_file, FFGET_FI
 
     /** Proceed to read, process and finish headers **/
     DMIMEH LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: Getting headers",FL);
-    if ( result == 0 ) result = MIMEH_headers_get( header_file, original_header_file, hinfo, f, unpack_metadata, save_headers_original);
+    if ( result == 0 ) result = MIMEH_headers_get( header_file, original_header_file, hinfo, f, unpack_metadata, save_headers_original, save_headers);
     DMIMEH LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: Processing headers",FL);
     if ( result == 0 ) result = MIMEH_headers_process( hinfo, glb.headerline );
     DMIMEH LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: cleanup of headers",FL);
@@ -2979,7 +2955,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIMEH_read_primary_headers( FILE* header_file, FILE* original_header_file, char *fname, struct MIMEH_header_info *hinfo, RIPMIME_output *unpack_metadata, int save_headers_original )
+int MIMEH_read_primary_headers( FILE* header_file, FILE* original_header_file, char *fname, struct MIMEH_header_info *hinfo, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers )
 {
     FFGET_FILE F;
     FILE *f;
@@ -2991,7 +2967,7 @@ int MIMEH_read_primary_headers( FILE* header_file, FILE* original_header_file, c
     }
     FFGET_setstream(&F,f);
 
-    MIMEH_parse_headers(header_file, original_header_file, &F, hinfo, unpack_metadata, save_headers_original);
+    MIMEH_parse_headers(header_file, original_header_file, &F, hinfo, unpack_metadata, save_headers_original, save_headers);
     fclose(f);
 
     return 0;

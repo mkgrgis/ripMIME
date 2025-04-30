@@ -2602,7 +2602,7 @@ int MIME_unpack_stage2( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, st
     /** 20041216-1102:PLD: Keep attempting to read headers until we get a sane set **/
     do {
         /** Read next set of headers, repeat until a sane set of headers are found **/
-        result = MIMEH_parse_headers(NULL, NULL, input_f,h,unpack_metadata->dir, 0);
+        result = MIMEH_parse_headers(NULL, NULL, input_f,h,unpack_metadata->dir, 0, 0);
         DMIME LOGGER_log("%s:%d:%s:DEBUG: Parsing of headers done, sanity = %d, result = %d",FL,__func__,h->sanity, result);
     } while ((h->sanity == 0)&&(result != -1));
 
@@ -2703,7 +2703,7 @@ int MIME_unpack_stage2( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, st
 
                     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding headers...\n",FL,__func__);
                     do {
-                        result = MIMEH_parse_headers(NULL, NULL, input_f, h, unpack_metadata->dir, 0);
+                        result = MIMEH_parse_headers(NULL, NULL, input_f, h, unpack_metadata->dir, 0, 0);
                     } while ((h->sanity == 0)&&(result != -1));
 
                     glb.header_defect_count += MIMEH_get_defect_count(h);
@@ -3070,7 +3070,7 @@ int MIME_unpack_single_file( RIPMIME_output *unpack_metadata, FILE *fi, int curr
     glb.current_line = 0;
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: recursion level checked...%d\n",FL,__func__, current_recursion_level);
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: DumpHeaders = %d\n",FL,__func__, glb.save_headers);
-    if ((!hf)&&(glb.save_headers)&&(MIMEH_get_headers_save()==0))
+    if ((!hf)&&(glb.save_headers))
     {
         char * fn;
         int fn_l = strlen(unpack_metadata->dir) + strlen(glb.headersname) + sizeof(char) * 2;
