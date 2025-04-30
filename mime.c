@@ -2069,7 +2069,7 @@ int MIME_generate_multiple_hardlink_filenames(struct MIMEH_header_info *hinfo, R
 }
 
 /*------------------------------------------------------------------------
-Procedure:     MIME_decode_encoding ID:1
+Procedure:     MIME_process_content_transfer_encoding ID:1
 Purpose:       Based on the contents of hinfo, this function will call the
                required function needed to decode the contents of the file
                which is contained within the MIME structure
@@ -2077,7 +2077,7 @@ Input:
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, struct SS_object *ss )
+int MIME_process_content_transfer_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, struct SS_object *ss )
 {
     int keep = 1;
     int result = -1;
@@ -2433,7 +2433,7 @@ int MIME_handle_multipart( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata,
         if (p) PLD_strncpy(h->boundary, p,sizeof(h->boundary));
     } else {
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Embedded message has a filename, decoding to file %s",FL,__func__,h->filename);
-        result = MIME_decode_encoding( input_f, unpack_metadata, h, ss );
+        result = MIME_process_content_transfer_encoding( input_f, unpack_metadata, h, ss );
         if (result == 0)
         {
             char *fn;
@@ -2505,7 +2505,7 @@ int MIME_handle_rfc822( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, st
     } else {
         /** ...else... if the section has a filename or B64 type encoding, we need to put it through extra decoding **/
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Embedded message has a filename, decoding to file %s",FL,__func__,h->filename);
-        result = MIME_decode_encoding( input_f, unpack_metadata, h, ss );
+        result = MIME_process_content_transfer_encoding( input_f, unpack_metadata, h, ss );
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Result of extracting %s is %d",FL,__func__,h->filename, result);
         if (result == 0) {
             char * fn;
@@ -2552,7 +2552,7 @@ int MIME_handle_plain( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, str
     /** Handle a plain text encoded data stream from *input_f **/
     int result = 0;
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Handling plain email",FL,__func__);
-    result = MIME_decode_encoding( input_f, unpack_metadata, h, ss );
+    result = MIME_process_content_transfer_encoding( input_f, unpack_metadata, h, ss );
     if ((result == MIME_ERROR_FFGET_EMPTY)||(result == 0))
     {
         /** Test for RFC822 content... if so, go decode it **/
@@ -2684,7 +2684,7 @@ int MIME_unpack_stage2( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, st
         // Decode the data in the current MIME segment
         // based on the header information retrieved from
         // the start of this function.
-        result = MIME_decode_encoding(input_f, unpack_metadata, h, ss);
+        result = MIME_process_content_transfer_encoding(input_f, unpack_metadata, h, ss);
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Done decoding, result = %d",FL,__func__,result);
         if (result == 0)
         {
@@ -2749,10 +2749,10 @@ int MIME_unpack_stage2( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, st
                                 // the most efficent way of dealing with nested emails
                                 // however, it is a rather robust/reliable way.
                                 if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Chose Content-type == RFC822 clause",FL,__func__);
-                                if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Calling MIME_decode_encoding()",FL,__func__);
+                                if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Calling MIME_process_content_transfer_encoding()",FL,__func__);
                                 result = MIME_handle_rfc822(input_f,unpack_metadata,h,current_recursion_level,ss);
                                 // First up - extract the RFC822 body out of the parent mailpack
-                                // XX result = MIME_decode_encoding( input_f, unpackdir, h, ss );
+                                // XX result = MIME_process_content_transfer_encoding( input_f, unpackdir, h, ss );
 
                                 // Now decode the RFC822 body.
                                 /**
@@ -2798,7 +2798,7 @@ int MIME_unpack_stage2( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, st
 
                         } else {
                             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: RFC822 Message to be decoded...\n",FL,__func__);
-                            result = MIME_decode_encoding( input_f, unpack_metadata, h, ss );
+                            result = MIME_process_content_transfer_encoding( input_f, unpack_metadata, h, ss );
                             if (result != 0) return result; // 20040305-1313:PLD
                             else
                             {
@@ -2822,7 +2822,7 @@ int MIME_unpack_stage2( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, st
                             // multipart or RFC822 embedded email, we can then simply use
                             // the normal decoding function to interpret its data.
                             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding a normal attachment \n",FL,__func__);
-                            result = MIME_decode_encoding( input_f, unpack_metadata, h, ss );
+                            result = MIME_process_content_transfer_encoding( input_f, unpack_metadata, h, ss );
 
                             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding a normal attachment '%s' done. \n",FL,__func__, h->filename);
                             // See if we have an attachment output which is actually another
