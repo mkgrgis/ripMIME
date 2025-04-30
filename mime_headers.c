@@ -388,46 +388,6 @@ int MIMEH_get_verbosity_contenttype( void )
 }
 
 /*-----------------------------------------------------------------\
-  Function Name : MIMEH_get_headers_ptr
-  Returns Type  : int
-  ----Parameter List
-  1. void ,
-  ------------------
-  Exit Codes    :
-  Side Effects  :
-  --------------------------------------------------------------------
-Comments:
-
---------------------------------------------------------------------
-Changes:
-
-\------------------------------------------------------------------*/
-char *MIMEH_get_headers_ptr( void )
-{
-    return glb.headerline;
-}
-
-/*-----------------------------------------------------------------\
-  Function Name : *MIMEH_get_headers_original_ptr
-  Returns Type  : char
-  ----Parameter List
-  1. void ,
-  ------------------
-  Exit Codes    :
-  Side Effects  :
-  --------------------------------------------------------------------
-Comments:
-
---------------------------------------------------------------------
-Changes:
-
-\------------------------------------------------------------------*/
-char *MIMEH_get_headers_original_ptr( void )
-{
-    return glb.headerline_original;
-}
-
-/*-----------------------------------------------------------------\
   Function Name : MIMEH_set_header_longsearch
   Returns Type  : int
   ----Parameter List
