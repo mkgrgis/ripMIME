@@ -69,7 +69,6 @@ struct MIMEH_globals {
     char subject[_MIMEH_STRLEN_MAX +1];
 
     char *headerline;
-    char *headerline_original;  // Holds the original header-form without decoding.
     int test_mailbox;
     int debug;
     int webform;
@@ -124,7 +123,6 @@ void MIMEH_init( void )
 {
     glb.doubleCR = 0;
     glb.headerline = NULL;
-    glb.headerline_original = NULL;
 
     glb.test_mailbox = 0;
     glb.debug = 0;
@@ -914,10 +912,10 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
             ,FFGET_ftell(f)
             );
     do {
+        char *headerline_original = NULL;  // Holds the original header-form without decoding.
 
         search_count++;
         glb.headerline = NULL;
-        glb.headerline_original = NULL;
         tmp_original = NULL;
 
         while ((fget_result=FFGET_fgets(buffer,_MIMEH_STRLEN_MAX, f)))
@@ -945,26 +943,26 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
             if (save_headers_original)
             {
                 if (MIMEH_DNORMAL) LOGGER_log("MIMEH_read_headers:DEBUG:Data-In:[%d:%d] '%s'", strlen(linestart), linesize, linestart);
-                tmp_original = realloc(glb.headerline_original, totalsize_original+linesize+1);
+                tmp_original = realloc(headerline_original, totalsize_original+linesize+1);
                 if (tmp_original == NULL)
                 {
                     LOGGER_log("%s:%d:MIMEH_read_headers:ERROR: Cannot allocate %d bytes to contain new headers_original ", FL,totalsize_original +linesize +1);
-                    if (glb.headerline_original != NULL) free(glb.headerline_original);
-                    glb.headerline_original = NULL;
+                    if (headerline_original != NULL) free(headerline_original);
+                    headerline_original = NULL;
                     return -1;
                 }
 
-                if (glb.headerline_original == NULL)
+                if (headerline_original == NULL)
                 {
-                    glb.headerline_original = tmp_original;
+                    headerline_original = tmp_original;
                     totalsize_original = linesize +1;
-                    PLD_strncpy( glb.headerline_original, linestart, (linesize+1));
-                    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_read_headers:DEBUG: '%s'", FL, glb.headerline_original);
+                    PLD_strncpy( headerline_original, linestart, (linesize+1));
+                    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_read_headers:DEBUG: '%s'", FL, headerline_original);
                 } else {
-                    glb.headerline_original = tmp_original;
-                    PLD_strncpy( (glb.headerline_original +totalsize_original -1), linestart, (linesize +1));
+                    headerline_original = tmp_original;
+                    PLD_strncpy( (headerline_original +totalsize_original -1), linestart, (linesize +1));
                     totalsize_original += linesize;
-                    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_read_headers:DEBUG: HO =  '%s'", FL, glb.headerline_original);
+                    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_read_headers:DEBUG: HO =  '%s'", FL, headerline_original);
                 }
                 //LOGGER_log("DEBUG:linesize=%d data='%s'",linesize, linestart);
             }
@@ -975,7 +973,8 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
             if (tmp == NULL)
             {
                 LOGGER_log("%s:%d:MIMEH_read_headers:ERROR: Cannot allocate %d bytes to contain new headers ", FL,totalsize +linesize +1);
-                if (glb.headerline != NULL) free(glb.headerline);
+                if (glb.headerline != NULL)
+                    free(glb.headerline);
                 glb.headerline = NULL;
                 return -1;
             }
@@ -1096,7 +1095,16 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
                 {
                     /** If not RFC822 headers, then clean up everything we allocated in here **/
                     DMIMEH LOGGER_log("%s:%d:MIME_read_headers:DEBUG: No RFC822 headers detected, cleanup.", FL);
-                    MIMEH_headers_cleanup();
+                    if (headerline_original != NULL)
+                    {
+                        free(headerline_original);
+                        headerline_original = NULL;
+                    }
+                    if (glb.headerline != NULL)
+                    {
+                        free(glb.headerline);
+                        glb.headerline = NULL;
+                    }
                 }
             }
         }
@@ -2751,7 +2759,11 @@ int MIMEH_headers_get(FILE* header_file, FILE* original_header_file,  struct MIM
     // flag this, free up the headers, and return.
     if (result == -1)
     {
-        if (glb.headerline) free(glb.headerline);
+        if (glb.headerline)
+        {
+            free(glb.headerline);
+            glb.headerline = NULL;
+        }
         return result;
     }
 
@@ -2764,38 +2776,6 @@ int MIMEH_headers_get(FILE* header_file, FILE* original_header_file,  struct MIM
     }
 
     return result;
-}
-
-/*-----------------------------------------------------------------\
-  Function Name : MIMEH_headers_cleanup
-  Returns Type  : int
-  ----Parameter List
-  1. void ,
-  ------------------
-  Exit Codes    :
-  Side Effects  :
-  --------------------------------------------------------------------
-Comments:
-
---------------------------------------------------------------------
-Changes:
-
-\------------------------------------------------------------------*/
-int MIMEH_headers_cleanup( void )
-{
-    if (glb.headerline != NULL)
-    {
-        free(glb.headerline);
-        glb.headerline = NULL;
-    }
-
-    if (glb.headerline_original != NULL)
-    {
-        free(glb.headerline_original);
-        glb.headerline_original = NULL;
-    }
-
-    return 0;
 }
 
 /*-----------------------------------------------------------------\
@@ -2828,7 +2808,11 @@ int MIMEH_parse_headers( FILE* header_file, FILE* original_header_file, FFGET_FI
     DMIMEH LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: Processing headers",FL);
     if ( result == 0 ) result = MIMEH_headers_process( hinfo, glb.headerline );
     DMIMEH LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: cleanup of headers",FL);
-    if ( result == 0 ) result = MIMEH_headers_cleanup();
+    if (glb.headerline != NULL)
+    {
+        free(glb.headerline);
+        glb.headerline = NULL;
+    }
     if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: END [F=%p, hinfo=%p, sanity=%d]\n", FL, f, hinfo, hinfo->sanity);
 
     return result;
