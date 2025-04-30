@@ -368,9 +368,8 @@ FFGET_FILE * UUENCODE_make_sourcestream( FILE *f)
   1.  FFGET_FILE *f,				Source Data Stream
   2.  char *out_filename,		Pointer to a buffer where we will write the filename of the UU data
   3.  int decode_whole_file, 0 == only first segment, >0 == all
-  4.  int keep ,					Keep the files we create, don't delete
-  5.  unpack file metadata
-  6.  related MIME headers
+  4.  unpack file metadata
+  5.  related MIME headers
   ------------------
   Exit Codes	:		Returns the number of attachments decoded in the data
   Side Effects	:
@@ -381,7 +380,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int UUENCODE_decode_uu( FFGET_FILE *f, char *out_filename, int decode_whole_file, int keep, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo )
+int UUENCODE_decode_uu( FFGET_FILE *f, char *out_filename, int decode_whole_file, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo )
 {
 	int filename_found = 0;
 	char buf[ UUENCODE_STRLEN_MAX ];

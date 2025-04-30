@@ -21,7 +21,7 @@ int UUENCODE_set_filename_report_fn( int (*ptr_to_fn)(char *, char *) );
 int UUENCODE_is_uuencode_header( char *line );
 int UUENCODE_is_diskfile_uuencoded( char *fname );
 
-int UUENCODE_decode_uu( FFGET_FILE *f, char *out_filename, int decode_whole_file, int keep, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo );
+int UUENCODE_decode_uu( FFGET_FILE *f, char *out_filename, int decode_whole_file, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo );
 FILE * UUENCODE_make_file_obj (char *input_filename);
 FFGET_FILE * UUENCODE_make_sourcestream( FILE *f);
 

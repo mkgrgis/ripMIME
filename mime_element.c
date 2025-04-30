@@ -121,7 +121,7 @@ void MIME_element_free (MIME_element* cur)
 	dup_free(cur->name);
 
 	free(cur);
-	cur == NULL;
+	cur = NULL;
 }
 
 void MIME_element_deactivate(MIME_element* cur, RIPMIME_output *unpack_metadata)
@@ -133,9 +133,14 @@ void MIME_element_deactivate(MIME_element* cur, RIPMIME_output *unpack_metadata)
 static inline int get_random_value(void) {
 	int randval;
 	FILE *fp;
+	size_t res = 0;
 
 	fp = fopen("/dev/urandom", "r");
-	fread(&randval, sizeof(randval), 1, fp);
+	res = fread(&randval, sizeof(randval), 1, fp);
+	if (res == 0) {
+		if (MIME_DNORMAL) LOGGER_log("%s:%d:%s: /dev/urandom Read error\n",FL,__func__);
+			exit(1);
+	}
 	fclose(fp);
 	if (randval < 0)
 	{ randval = randval *( -1); };

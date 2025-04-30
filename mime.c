@@ -1035,7 +1035,7 @@ Input:
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_decode_TNEF( RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int keep )
+int MIME_decode_TNEF( RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo )
 {
     int result = TNEF_main( hinfo->filename, unpack_metadata->dir );
 
@@ -1063,7 +1063,6 @@ int MIME_report_filename_decoded_RIPOLE(char *filename)
   ----Parameter List
   1. RIPMIME_output *unpack_metadata,
   2.  struct MIMEH_header_info *hinfo,
-  3.  int keep ,
   ------------------
   Exit Codes    :
   Side Effects  :
@@ -1074,7 +1073,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIME_decode_OLE_diskfile( RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int keep )
+int MIME_decode_OLE_diskfile( RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo )
 {
     struct OLE_object ole;
     char fullpath[1024];
@@ -1100,7 +1099,7 @@ int MIME_decode_OLE_diskfile( RIPMIME_output *unpack_metadata, struct MIMEH_head
     return result;
 }
 
-int MIME_decode_OLE_file( RIPMIME_output *unpack_metadata, FILE *f, int keep )
+int MIME_decode_OLE_file( RIPMIME_output *unpack_metadata, FILE *f )
 {
     struct OLE_object ole;
     int result;
@@ -1131,7 +1130,7 @@ Input:
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int keep, MIME_element* decoded_mime )
+int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, MIME_element* decoded_mime )
 {
     int result = 0;
     int bufsize=1024;
@@ -1185,7 +1184,7 @@ int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIME
         if ( hinfo->content_transfer_encoding == _CTRANS_ENCODING_UUENCODE ) decode_entire_file = 0;
       
         ffg = UUENCODE_make_sourcestream(cur_mime->f); /* fseek to begin is here */
-        result = UUENCODE_decode_uu(ffg , hinfo->uudec_name, decode_entire_file, keep, unpack_metadata, hinfo );
+        result = UUENCODE_decode_uu(ffg , hinfo->uudec_name, decode_entire_file, unpack_metadata, hinfo );
         if (result == -1)
         {
             switch (uuencode_error) {
@@ -1214,7 +1213,7 @@ int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIME
             {
                 if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding TNEF format\n",FL,__func__);
                 snprintf(hinfo->filename, 128, "%s", hinfo->uudec_name);
-                MIME_decode_TNEF( unpack_metadata, hinfo, keep);
+                MIME_decode_TNEF( unpack_metadata, hinfo);
             }
             else LOGGER_log("%s:%d:%s:WARNING: hinfo has been clobbered.\n",FL,__func__);
         }
@@ -1231,11 +1230,10 @@ Procedure:     MIME_decode_text ID:1
 Purpose:       Decodes an input stream into a text file.
 Input:         unpackdir : directory where to place new text file
 hinfo : struct containing information from the last parsed headers
-keep : if set, retain the file
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int keep, MIME_element* decoded_mime )
+int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, MIME_element* decoded_mime )
 {
     int linecount = 0;                  // The number of lines
     int file_has_uuencode = 0;          // Flag to indicate this text has UUENCODE in it
@@ -1333,7 +1331,7 @@ int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIM
         //
         hinfo->uudec_name[0] = '\0';
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UUencoded data in file '%s'\n",FL,__func__,hinfo->filename);
-        //result = UUENCODE_decode_uu( NULL, info->filename, hinfo->uudec_name, 1, keep );
+        //result = UUENCODE_decode_uu( NULL, info->filename, hinfo->uudec_name, 1 );
         // Attempt to decode the UUENCODED data in the file,
         //      NOTE - hinfo->uudec_name is a blank buffer which will be filled by the UUENCODE_decode_uu
         //          function once it has located a filename in the UUENCODED data.  A bit of a problem here
@@ -1345,7 +1343,7 @@ int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIM
         fuue = UUENCODE_make_file_obj (ffname);
         ffg = UUENCODE_make_sourcestream(fuue);
 
-        result = UUENCODE_decode_uu( ffg, hinfo->uudec_name, 1, keep, unpack_metadata, hinfo );
+        result = UUENCODE_decode_uu( ffg, hinfo->uudec_name, 1, unpack_metadata, hinfo );
         fclose(fuue);
         if (result == -1)
         {
@@ -1372,7 +1370,7 @@ int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIM
         {
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding TNEF format\n",FL,__func__);
             snprintf(hinfo->filename, 128, "%s", hinfo->uudec_name);
-            MIME_decode_TNEF( unpack_metadata, hinfo, keep );
+            MIME_decode_TNEF( unpack_metadata, hinfo );
         }
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Completed decoding UUencoded data.\n",FL,__func__);
     }
@@ -1761,7 +1759,7 @@ int MIME_doubleCR_decode( char *filename, RIPMIME_output *unpack_metadata, struc
         fuue = UUENCODE_make_file_obj (filename);
         ffg = UUENCODE_make_sourcestream(fuue);
         UUENCODE_set_doubleCR_mode(1);
-        result = UUENCODE_decode_uu(ffg, h.uudec_name, 1, 1, unpack_metadata, hinfo );
+        result = UUENCODE_decode_uu(ffg, h.uudec_name, 1, unpack_metadata, hinfo );
         fclose(fuue);
         UUENCODE_set_doubleCR_mode(0);
         glb.attachment_count += result;
@@ -2175,13 +2173,16 @@ int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, 
 
         } // If we were using the new filename telling format
     } // If we were telling the filename (verbosity)
-    if (1)
+
     {
         char *fp;
         /** Find the start of the filename. **/
         fp = strrchr(hinfo->filename, '/');
-        if (fp) fp++; else fp = hinfo->filename;
-        //LOGGER_log("%s:%d:%s:DEBUG: Pushing filename %s to the stack",FL,__func__,fp);
+        if (fp)
+            fp++;
+        else
+            fp = hinfo->filename;
+        if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Pushing filename %s to the stack",FL,__func__,fp);
         // 20040305-1419:PLD
         // Store the filename we're going to use to save the file to in the filename stack
         SS_push(ss, fp, strlen(fp));
@@ -2210,26 +2211,26 @@ int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, 
             break;
         case _CTRANS_ENCODING_7BIT:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding 7BIT format\n",FL,__func__);
-            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep, decoded_mime);
+            result = MIME_decode_text(input_f, unpack_metadata, hinfo, decoded_mime);
             break;
         case _CTRANS_ENCODING_8BIT:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding 8BIT format\n",FL,__func__);
-            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep, decoded_mime);
+            result = MIME_decode_text(input_f, unpack_metadata, hinfo, decoded_mime);
             break;
         case _CTRANS_ENCODING_BINARY:
         case _CTRANS_ENCODING_RAW:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding RAW format\n",FL,__func__);
-            result = MIME_decode_raw(input_f, unpack_metadata, hinfo, keep, decoded_mime);
+            result = MIME_decode_raw(input_f, unpack_metadata, hinfo, decoded_mime);
             break;
         case _CTRANS_ENCODING_QP:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding Quoted-Printable format\n",FL,__func__);
-            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep, decoded_mime);
+            result = MIME_decode_text(input_f, unpack_metadata, hinfo, decoded_mime);
             break;
         case _CTRANS_ENCODING_UUENCODE:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UUENCODED format\n",FL,__func__);
             // Added as a test - remove if we can get this to work in a better way
             snprintf(hinfo->uudec_name,sizeof(hinfo->uudec_name),"%s",hinfo->filename);
-            result = UUENCODE_decode_uu(input_f, hinfo->uudec_name, 0, keep, unpack_metadata, hinfo );
+            result = UUENCODE_decode_uu(input_f, hinfo->uudec_name, 0, unpack_metadata, hinfo );
             glb.attachment_count += result;
             // Because this is a file-count, it's not really an 'error result' as such, so, set the
             //      return code back to 0!
@@ -2239,17 +2240,17 @@ int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, 
             switch (hinfo->content_disposition) {
                 case _CDISPOSITION_FORMDATA:
                     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UNKNOWN format of FORMDATA disposition\n",FL,__func__);
-                    result = MIME_decode_raw(input_f, unpack_metadata, hinfo, keep, decoded_mime);
+                    result = MIME_decode_raw(input_f, unpack_metadata, hinfo, decoded_mime);
                     break;
                 default:
                     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UNKNOWN format\n",FL,__func__);
-                    result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep, decoded_mime);
+                    result = MIME_decode_text(input_f, unpack_metadata, hinfo, decoded_mime);
             }
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: UNKNOWN Decode completed, result = %d\n",FL,__func__,result);
             break;
         case _CTRANS_ENCODING_UNSPECIFIED:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UNSPECIFIED format\n",FL,__func__);
-            result = MIME_decode_text(input_f, unpack_metadata, hinfo, keep, decoded_mime);
+            result = MIME_decode_text(input_f, unpack_metadata, hinfo, decoded_mime);
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding result for UNSPECIFIED format = %d\n",FL,__func__, result);
             // 20040114-1236:PLD: Added nested mail checking
             //
@@ -2276,7 +2277,7 @@ int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, 
             break;
         default:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding format is not defined (%d)\n",FL,__func__, hinfo->content_transfer_encoding);
-            result = MIME_decode_raw(input_f, unpack_metadata, hinfo, keep, decoded_mime);
+            result = MIME_decode_raw(input_f, unpack_metadata, hinfo, decoded_mime);
             break;
     }
     // Analyze our results
@@ -2306,7 +2307,7 @@ int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, 
         //      performance of the ripMIME decoding engine
         if (glb.decode_ole > 0)
         {
-            MIME_decode_OLE_diskfile( unpack_metadata, hinfo, 0 );
+            MIME_decode_OLE_diskfile( unpack_metadata, hinfo );
         }
 #endif
 
@@ -2320,7 +2321,7 @@ int MIME_decode_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, 
         {
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding TNEF format\n",FL,__func__);
             glb.attachment_count++;
-            MIME_decode_TNEF( unpack_metadata, hinfo, 0 );
+            MIME_decode_TNEF( unpack_metadata, hinfo );
         } // Decode TNEF
 
         // Look for Microsoft MHT files... and try decode them.
