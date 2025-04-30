@@ -436,7 +436,7 @@ int MIMEH_set_defect( struct MIMEH_header_info *hinfo, int defect )
     {
         hinfo->defects[defect]++;
         hinfo->header_defect_count++;
-        DMIMEH LOGGER_log("%s:%d:MIMEH_set_defect:DEBUG: Setting defect index '%d' to '%d'",FL, defect, hinfo->defects[defect]);
+        DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Setting defect index '%d' to '%d'",FL, __func__, defect, hinfo->defects[defect]);
     }
     return 0;
 }
@@ -523,11 +523,11 @@ int MIMEH_are_headers_RFC822( char *headers )
 
     if (headers == NULL)
     {
-        DMIMEH LOGGER_log("%s:%d:MIMEH_are_headers_RFC822:DEBUG: Headers are NULL");
+        DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Headers are NULL");
         return 0;
     }
 
-    DMIMEH LOGGER_log("%s:%d:MIMEH_are_headers_RFC822:DEBUG:----\n%s\n----",FL,headers);
+    DMIMEH LOGGER_log("%s:%d:%s:DEBUG:----\n%s\n----",FL,headers);
 
     lc_headers = strdup(headers);
     if (lc_headers == NULL) return 0;
@@ -535,13 +535,13 @@ int MIMEH_are_headers_RFC822( char *headers )
     //PLD_strlower((unsigned char *)lc_headers);
     PLD_strlower(lc_headers);
 
-    DMIMEH LOGGER_log("%s:%d:MIMEH_are_headers_RFC822:DEBUG:----(lowercase)----\n%s\n----",FL,lc_headers);
+    DMIMEH LOGGER_log("%s:%d:%s:DEBUG:----(lowercase)----\n%s\n----",FL,lc_headers);
 
     for (condition_item=0; condition_item < 6; condition_item++)
     {
         char *p;
 
-        DMIMEH LOGGER_log("%s:%d:MIMEH_are_headers_RFC822:DEBUG: Condition test item[%d] = '%s'",FL,condition_item,conditions[condition_item]);
+        DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Condition test item[%d] = '%s'",FL,condition_item,conditions[condition_item]);
         p = strstr(lc_headers, conditions[condition_item]);
         if (p != NULL)
         {
@@ -584,7 +584,7 @@ int MIMEH_save_doubleCR( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct 
 
     cur_mime = MIME_element_add (NULL, unpack_metadata, glb.doubleCRname, "doubleCR", NULL, "doubleCR", hinfo->current_recursion_level + 1, 0, 0, __func__);
 
-    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIME_save_doubleCR:DEBUG: Saving DoubleCR header: %s\n", FL,glb.doubleCRname);
+    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Saving DoubleCR header: %s\n", FL,glb.doubleCRname);
     while (1)
     {
         c = FFGET_fgetc(f);
@@ -675,7 +675,7 @@ int MIMEH_strip_comments( char *input )
         {
             int stop_searching = 0;
 
-            DMIMEH LOGGER_log("%s:%d:MIMEH_strip_comments:DEBUG: Located open ( at %s",FL,p);
+            DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Located open ( at %s",FL,p);
             // If we did locate an opening parenthesis, look for the closing one
             //      NOTE - we cannot have a breaking \n or \r inbetween
             //      q = strpbrk(p, ")\n\r");
@@ -699,7 +699,7 @@ int MIMEH_strip_comments( char *input )
                         break;
 
                     case ')':
-                        DMIMEH LOGGER_log("%s:%d:MIMEH_strip_comments:DEBUG: Located closing ) at %s",FL,q);
+                        DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Located closing ) at %s",FL,q);
                         if (in_quote == 0) stop_searching = 1;
                         break;
                 }
@@ -720,7 +720,7 @@ int MIMEH_strip_comments( char *input )
                     // Move q to the first char after the closing parenthesis
                     q++;
 
-                    DMIMEH LOGGER_log("%s:%d:MIMEH_strip_comments:DEBUG: located closing ) at %s ",FL, q);
+                    DMIMEH LOGGER_log("%s:%d:%s:DEBUG: located closing ) at %s ",FL, __func__, q);
                     // While there's more chars in string, copy them to where
                     //      the opening parenthesis is
                     while (*q != '\0')
@@ -729,7 +729,7 @@ int MIMEH_strip_comments( char *input )
                         p++;
                         q++;
                     } // While q != '\0'
-                    DMIMEH LOGGER_log("%s:%d:MIMEH_strip_comments:DEBUG: char copy done",FL);
+                    DMIMEH LOGGER_log("%s:%d:%s:DEBUG: char copy done",FL, __func__);
 
                     // Terminate the string
                     *p = '\0';
@@ -739,7 +739,7 @@ int MIMEH_strip_comments( char *input )
         } // if p == NULL
     } while ((p != NULL)&&(p_org != NULL)); // do-while more comments to remove
 
-    DMIMEH LOGGER_log("%s:%d:MIMEH_strip_comments:DEBUG: Final string = '%s'",FL,input);
+    DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Final string = '%s'",FL, __func__, input);
     return 0;
 }
 
@@ -811,7 +811,7 @@ int MIMEH_fix_header_mistakes( char *data )
     int result = 0;
     char *p;
 
-    DMIMEH LOGGER_log("%s:%d:MIMEH_fix_header_mistakes:DEBUG: Checking and fixing headers in '%s'",FL,data);
+    DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Checking and fixing headers in '%s'",FL, __func__, data);
 
     if (glb.header_fix == 0) return result;
 
@@ -825,7 +825,7 @@ int MIMEH_fix_header_mistakes( char *data )
 
         q = p+1;
 
-        DMIMEH LOGGER_log("%s:%d:MIMEH_fix_header_mistakes:DEBUG: Located ';' at offset %d '%20s",FL, p -data, p);
+        DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Located ';' at offset %d '%20s",FL, __func__, p -data, p);
 
         if ((*q == '\n')||(*q == '\r')) {
             nonblank_detected = 0;
@@ -852,7 +852,7 @@ int MIMEH_fix_header_mistakes( char *data )
         } /** ELSE - if *q wasn't a line break char **/
 
         if (nonblank_detected == 1) {
-            DMIMEH LOGGER_log("%s:%d:MIMEH_fix_header_mistakes:DEBUG: Line was normal/safe, continue...",FL);
+            DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Line was normal/safe, continue...",FL, __func__);
             p++;
             continue;
         } /** if nonblank_detected == 1 **/
@@ -860,11 +860,11 @@ int MIMEH_fix_header_mistakes( char *data )
          ** line, then we need to pull up the next line **/
         if (*q != '\0') {
             if(!MIMEH_check_ct(q)){
-                DMIMEH LOGGER_log("%s:%d:MIMEH_fix_header_mistakes:DEBUG: Line needs fixing",FL);
+                DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Line needs fixing",FL, __func__);
                 *q = ' ';
                 q++;
                 if ((*q == '\n')||(*q == '\r')) *q = ' ';
-                DMIMEH LOGGER_log("%s:%d:MIMEH_fix_header_mistakes:DEBUG: Line fixed",FL);
+                DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Line fixed",FL, __func__);
                 p = q;
             }else{
                 p++;
@@ -872,7 +872,7 @@ int MIMEH_fix_header_mistakes( char *data )
         } /** If q wasn't the end of data **/
     } /** while looking for more ';' chars **/
 
-    DMIMEH LOGGER_log("%s:%d:MIMEH_fix_header_mistakes:DEBUG: Done",FL);
+    DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Done",FL, __func__);
     return result;
 }
 
@@ -910,7 +910,7 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
       to be overly intelligent about interpreting data.
      **/
 
-    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_read_headers:DEBUG: File position = %ld [0x%0X]"
+    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: File position = %ld [0x%0X]"
             ,FL
             ,FFGET_ftell(f)
             ,FFGET_ftell(f)
@@ -932,13 +932,13 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
             else if (strstr(linestart,"\r\r")) hinfo->crcr_count++;
             else if (strchr(linestart,'\n')) hinfo->lf_count++;
 
-            if (MIMEH_DNORMAL)LOGGER_log("%s:%d:MIMEH_read_headers: [CRLF=%d, CRCR=%d, LF=%d] Data In=[sz=%d:tb=%d:mem=%p]'%s'",FL, hinfo->crlf_count, hinfo->crcr_count, hinfo->lf_count, linesize, f->trueblank, glb.headerline, buffer);
+            if (MIMEH_DNORMAL)LOGGER_log("%s:%d:%s: [CRLF=%d, CRCR=%d, LF=%d] Data In=[sz=%d:tb=%d:mem=%p]'%s'",FL, __func__, hinfo->crlf_count, hinfo->crcr_count, hinfo->lf_count, linesize, f->trueblank, glb.headerline, buffer);
 
             // If we are being told to copy the input data to an output file
             //      then do so here (this is for the originals)
             if (hinfo->original_header_file != NULL)
             {
-                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_read_headers:DEBUG: saving to file...",FL);
+                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: saving to file...",FL, __func__);
                 fprintf(hinfo->original_header_file,"%s",linestart);
             }
 
@@ -950,7 +950,7 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
                 tmp_original = realloc(headerline_original, totalsize_original+linesize+1);
                 if (tmp_original == NULL)
                 {
-                    LOGGER_log("%s:%d:MIMEH_read_headers:ERROR: Cannot allocate %d bytes to contain new headers_original ", FL,totalsize_original +linesize +1);
+                    LOGGER_log("%s:%d:%s:ERROR: Cannot allocate %d bytes to contain new headers_original ", FL, __func__, totalsize_original +linesize +1);
                     if (headerline_original != NULL) free(headerline_original);
                     headerline_original = NULL;
                     return -1;
@@ -961,22 +961,22 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
                     headerline_original = tmp_original;
                     totalsize_original = linesize +1;
                     PLD_strncpy( headerline_original, linestart, (linesize+1));
-                    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_read_headers:DEBUG: '%s'", FL, headerline_original);
+                    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: '%s'", FL, __func__, headerline_original);
                 } else {
                     headerline_original = tmp_original;
                     PLD_strncpy( (headerline_original +totalsize_original -1), linestart, (linesize +1));
                     totalsize_original += linesize;
-                    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_read_headers:DEBUG: HO =  '%s'", FL, headerline_original);
+                    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: HO =  '%s'", FL, __func__, headerline_original);
                 }
                 //LOGGER_log("DEBUG:linesize=%d data='%s'",linesize, linestart);
             }
 
             /** Normal processing of the headers now starts. **/
-            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_read_headers:DEBUG: realloc'ing dataspace",FL);
+            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: realloc'ing dataspace",FL, __func__);
             tmp = realloc(glb.headerline, totalsize+linesize+1);
             if (tmp == NULL)
             {
-                LOGGER_log("%s:%d:MIMEH_read_headers:ERROR: Cannot allocate %d bytes to contain new headers ", FL,totalsize +linesize +1);
+                LOGGER_log("%s:%d:%s:ERROR: Cannot allocate %d bytes to contain new headers ", FL, __func__, totalsize +linesize +1);
                 if (glb.headerline != NULL)
                     free(glb.headerline);
                 glb.headerline = NULL;
@@ -985,14 +985,14 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
 
             if (glb.headerline == NULL)
             {
-                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_read_headers:DEBUG: Initial appending of head to dataspace headerline = NULL  realloc block = %p linestart = %p linesize = %d",FL, tmp, linestart, linesize);
+                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Initial appending of head to dataspace headerline = NULL  realloc block = %p linestart = %p linesize = %d",FL, __func__, tmp, linestart, linesize);
                 glb.headerline = tmp;
                 totalsize = linesize;
                 PLD_strncpy(glb.headerline, linestart, (linesize +1));
             } // If the global headerline is currently NULL
             else
             {
-                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_read_headers:DEBUG: Appending of new data to existing header  existing-headerline = %p  new realloc block = %p linestart = %p linesize = %d",FL, glb.headerline, tmp, linestart, linesize);
+                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Appending of new data to existing header  existing-headerline = %p  new realloc block = %p linestart = %p linesize = %d",FL, __func__, glb.headerline, tmp, linestart, linesize);
 
                 // Perform header unfolding by removing any CRLF's
                 //  of the last line if the first characters of the
@@ -1015,10 +1015,10 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
                     //      we are going to append the newly read line
 
                     p = glb.headerline +totalsize -1;
-                    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_read_headers:DEBUG: unwrapping headers headers=%p, p = %p",FL,glb.headerline, p);
+                    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: unwrapping headers headers=%p, p = %p",FL, __func__, glb.headerline, p);
                     while ((p >= glb.headerline)&&(( *p == '\n' )||( *p == '\r' )))
                     {
-                        if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_read_headers:DEBUG: Removing trailing space p=[%p]%c",FL, p, *p);
+                        if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Removing trailing space p=[%p]%c",FL, __func__, p, *p);
                         *p = '\0';
                         p--;
                         totalsize--;
@@ -1027,7 +1027,7 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
                     p = glb.headerline +totalsize -1;
                 }
 
-                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_read_headers:DEBUG: Memcopying line, source = %p, dest = %p, size = %d", FL, linestart, glb.headerline +totalsize, linesize);
+                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Memcopying line, source = %p, dest = %p, size = %d", FL, __func__, linestart, glb.headerline +totalsize, linesize);
                 memcpy((glb.headerline +totalsize), linestart, (linesize));
                 totalsize += linesize;
                 *(glb.headerline +totalsize) = '\0';
@@ -1036,18 +1036,18 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
 
             if (f->trueblank)
             {
-                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIME_read_headers:DEBUG: Trueblank line detected in header reading",FL);
-                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIME_read_headers:DEBUG: Headers /before/ decoding\n-------\n%s\n-------------------",FL, glb.headerline);
+                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Trueblank line detected in header reading",FL, __func__);
+                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Headers /before/ decoding\n-------\n%s\n-------------------",FL, __func__, glb.headerline);
 
                 MIMEH_fix_header_mistakes( glb.headerline );
                 MDECODE_decode_ISO( glb.headerline, totalsize  );
 
                 if ((save_headers)&&(glb.headerline))
                 {
-                    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIME_read_headers:DEBUG: Saving header line.",FL);
+                    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Saving header line.",FL, __func__);
                     fprintf(hinfo->header_file,"%s",glb.headerline);
                 }
-                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIME_read_headers:DEBUG: Final Headers\n------------------\n%s---------------", FL,glb.headerline);
+                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Final Headers\n------------------\n%s---------------", FL, __func__, glb.headerline);
                 //result = 1;
                 //result = 0;
                 break;
@@ -1076,14 +1076,14 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
 
         if (!fget_result)
         {
-            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIME_read_headers:ERROR: FFGET module ran out of input while reading headers",FL);
+            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:ERROR: FFGET module ran out of input while reading headers",FL, __func__);
             /** If we're meant to be saving the headers, we better do that now, even though we couldn't
              ** read everything we wanted to **/
-            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIME_read_headers:DEBUG: save_headers=%d totalsize=%d headerline=%s", FL, save_headers, totalsize, glb.headerline);
+            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: save_headers=%d totalsize=%d headerline=%s", FL, __func__, save_headers, totalsize, glb.headerline);
 
             if ((save_headers)&&(glb.headerline))
             {
-                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIME_read_headers:DEBUG: Saving header line.",FL);
+                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Saving header line.",FL, __func__);
                 MIMEH_fix_header_mistakes( glb.headerline );
                 MDECODE_decode_ISO( glb.headerline, totalsize  );
                 fprintf(hinfo->header_file,"%s",glb.headerline);
@@ -1098,7 +1098,7 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
                 if (is_RFC822_headers == 0)
                 {
                     /** If not RFC822 headers, then clean up everything we allocated in here **/
-                    DMIMEH LOGGER_log("%s:%d:MIME_read_headers:DEBUG: No RFC822 headers detected, cleanup.", FL);
+                    DMIMEH LOGGER_log("%s:%d:%s:DEBUG: No RFC822 headers detected, cleanup.", FL, __func__);
                     if (headerline_original != NULL)
                     {
                         free(headerline_original);
@@ -1114,7 +1114,7 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
         }
     } while ((is_RFC822_headers==0)&&(glb.header_longsearch>0)&&(result==0)&&(search_count<glb.longsearch_limit));
 
-    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_read_headers:DEBUG: Finished.",FL);
+    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Finished.",FL, __func__);
     return result;
 }
 
@@ -1171,12 +1171,12 @@ int MIMEH_decode_multivalue_language_string( char *input )
     int language_set = 0;
     char *q = input;
 
-    DMIMEH LOGGER_log("%s:%d:MIMEH_decode_multivalue_language_string:DEBUG: Decoding '%s'",FL,input);
+    DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Decoding '%s'",FL, __func__, input);
     // Count the single-quotes
     while ((*q != '\0')&&(sq_count != 2)) if (*q++ == '\'') sq_count++;
     if (sq_count < 2)
     {
-        //      LOGGER_log("%s:%d:MIMEH_decode_multivalue_language_string:WARNING: Insufficient single quotes for valid language-charset string",FL);
+        //      LOGGER_log("%s:%d:%s:WARNING: Insufficient single quotes for valid language-charset string",FL, __func__);
         q = input;
     } else {
         language_set = 1;
@@ -1195,7 +1195,7 @@ int MIMEH_decode_multivalue_language_string( char *input )
         *input = '\0';
     }
 
-    DMIMEH LOGGER_log("%s:%d:MIMEH_decode_multivalue_language_string:DEBUG: Output = '%s'",FL,q);
+    DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Output = '%s'",FL,q);
     return 0;
 }
 
@@ -1239,7 +1239,7 @@ int MIMEH_recompose_multivalue( struct MIMEH_header_info *hinfo, char *header_na
     char *start_position = header_value;
 
 
-    DMIMEH LOGGER_log("%s:%d:MIMEH_recompose_multivalue:DEBUG: seeking for %s in %s and appending to '%s'. Buffer size=%d", FL, header_name_prefix, header_value,buffer, buffer_size );
+    DMIMEH LOGGER_log("%s:%d:%s:DEBUG: seeking for %s in %s and appending to '%s'. Buffer size=%d", FL, __func__, header_name_prefix, header_value,buffer, buffer_size );
 
 
     // Locate the first part of the multipart string
@@ -1267,7 +1267,7 @@ int MIMEH_recompose_multivalue( struct MIMEH_header_info *hinfo, char *header_na
             p = strstr(q, header_name_prefix);
             if (p == NULL) break;
 
-            DMIMEH LOGGER_log("%s:%d:MIMEH_recompose_multivalue:DEBUG: prefix = '''%s'''", FL, p);
+            DMIMEH LOGGER_log("%s:%d:%s:DEBUG: prefix = '''%s'''", FL, __func__, p);
 
             q = strchr(p,'=');
             if (q == NULL) break;
@@ -1281,12 +1281,12 @@ int MIMEH_recompose_multivalue( struct MIMEH_header_info *hinfo, char *header_na
             // Move the pointer past the '=' separator
             q++;
 
-            DMIMEH LOGGER_log("%s:%d:MIMEH_recompose_multivalue:DEBUG: data = '''%s'''", FL, q);
+            DMIMEH LOGGER_log("%s:%d:%s:DEBUG: data = '''%s'''", FL, __func__, q);
 
 				// Is our string quoted (ie, will likely contain whitespace)
 				//
 				if (*q == '"') {
-					DMIMEH LOGGER_log("%s:%d:MIMEH_recompose_multivalue:DEBUG: multipart segment is quote-prefixed", FL);
+					DMIMEH LOGGER_log("%s:%d:%s:DEBUG: multipart segment is quote-prefixed", FL, __func__);
 					is_quoted = 1;
 				}
 
@@ -1314,11 +1314,11 @@ int MIMEH_recompose_multivalue( struct MIMEH_header_info *hinfo, char *header_na
             {
                 int bl;
 
-                //  LOGGER_log("%s:%d:DEBUG: Trimming '%s'", FL, q);
+                //  LOGGER_log("%s:%d:DEBUG: Trimming '%s'", FL, __func__, q);
                 q++;
                 bl = strlen(q);
                 if (*(q +bl -1) == '"') *(q +bl -1) = '\0';
-                //LOGGER_log("%s:%d:DEBUG: Trim done, '%s'", FL, q);
+                //LOGGER_log("%s:%d:DEBUG: Trim done, '%s'", FL, __func__, q);
             }
 
             if (decode_data == 1)
@@ -1326,12 +1326,12 @@ int MIMEH_recompose_multivalue( struct MIMEH_header_info *hinfo, char *header_na
                 MIMEH_decode_multivalue_language_string(q);
             }
 
-            DMIMEH LOGGER_log("%s:%d:MIMEH_recompose_multivalue:DEBUG: segment value = '%s', appending to '%s'", FL, q, buffer);
+            DMIMEH LOGGER_log("%s:%d:%s:DEBUG: segment value = '%s', appending to '%s'", FL, __func__, q, buffer);
             snprintf(buffer_start,buffer_size,"%s",q);
             q_len = strlen(q);
             buffer_size -= q_len;
             buffer_start += q_len;
-            DMIMEH LOGGER_log("%s:%d:MIMEH_recompose_multivalue:DEBUG: Buffer[remaining=%d]= '%s'", FL, buffer_size,buffer);
+            DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Buffer[remaining=%d]= '%s'", FL, __func__, buffer_size,buffer);
 
             if (end_point != NULL)
             {
@@ -1344,7 +1344,7 @@ int MIMEH_recompose_multivalue( struct MIMEH_header_info *hinfo, char *header_na
 
     }
 
-    DMIMEH LOGGER_log("%s:%d:MIMEH_recompose_multivalue:DEBUG: End point set to: [%d] '%s'",FL, (*data_end_point -header_value), *data_end_point);
+    DMIMEH LOGGER_log("%s:%d:%s:DEBUG: End point set to: [%d] '%s'",FL, __func__, (*data_end_point -header_value), *data_end_point);
     return result;
 }
 
@@ -1393,7 +1393,7 @@ int MIMEH_parse_header_parameter( struct MIMEH_header_info *hinfo,  char *data, 
     //PLD_strlower((unsigned char *)hl);
     PLD_strlower(hl);
 
-    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_header_parameter:DEBUG: Seeking '%s' in '%s'", FL, searchstr, hl);
+    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Seeking '%s' in '%s'", FL, __func__, searchstr, hl);
 
     // Look for the search string we're after (ie, filename, name, location etc)
     if (strncmp(hl,searchstr,strlen(searchstr))==0) p = hl; else p = NULL;
@@ -1402,7 +1402,7 @@ int MIMEH_parse_header_parameter( struct MIMEH_header_info *hinfo,  char *data, 
     {
         char *string = NULL;
 
-        if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_header_parameter:DEBUG: found %s in %s", FL, searchstr, p);
+        if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: found %s in %s", FL, __func__, searchstr, p);
 
         // Work out where in the -original- string the located parameter is.
         //      We need to work from the original string because we need to
@@ -1483,7 +1483,7 @@ int MIMEH_parse_header_parameter( struct MIMEH_header_info *hinfo,  char *data, 
         //      which needs to be decoded (ie, name*1*=foo name*2*=bar )
         if (*string == '*')
         {
-            DMIMEH LOGGER_log("%s:%d:MIMEH_parse_header_parameter:DEBUG: Found a '*' after the name, so attempting multipart value decode",FL);
+            DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Found a '*' after the name, so attempting multipart value decode",FL, __func__);
 
             // PLD:DEV:11/08/2004-18H30
             //  Issue: RFC2231 handling
@@ -1498,7 +1498,7 @@ int MIMEH_parse_header_parameter( struct MIMEH_header_info *hinfo,  char *data, 
             //if ( *string != '=' )
             if ( *string == '\0' )
             {
-                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_header_parameter:DEBUG: In '%s' parsing, was expecting a '=' in the start of '%s'\n", FL, searchstr, string );
+                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: In '%s' parsing, was expecting a '=' in the start of '%s'\n", FL, __func__, searchstr, string );
 
             }
             else {
@@ -1530,7 +1530,7 @@ int MIMEH_parse_header_parameter( struct MIMEH_header_info *hinfo,  char *data, 
                 // skip any spaces... again
                 while ( isspace((int) *string ) ) string++;
 
-                DMIMEH LOGGER_log("%s:%d:MIMEH_parse_header_parameter:DEBUG: Extracting value out of '%s'",FL,string);
+                DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Extracting value out of '%s'",FL, __func__, string);
 
                 // Because of all the potential exploits and bad behaviour
                 //      we have to be really careful about how we determine
@@ -1551,7 +1551,7 @@ int MIMEH_parse_header_parameter( struct MIMEH_header_info *hinfo,  char *data, 
                         //      broken MUA or due to an exploit attempt.
                         char *string_end;
 
-                        DMIMEH LOGGER_log("%s:%d:MIMEH_parse_header_parameter:DEBUG: Using quoted-string tests",FL);
+                        DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Using quoted-string tests",FL, __func__);
 
                         // Remove multiple-sequential quotes
                         string++;
@@ -1564,7 +1564,7 @@ int MIMEH_parse_header_parameter( struct MIMEH_header_info *hinfo,  char *data, 
                         string_end = strchr(string+1, '\"');
                         if (string_end != NULL)
                         {
-                            DMIMEH LOGGER_log("%s:%d:MIMEH_parse_header_parameter:DEBUG: End of value found",FL);
+                            DMIMEH LOGGER_log("%s:%d:%s:DEBUG: End of value found",FL, __func__);
                             *string_end = '\0';
                             *data_end_point = string_end +1;
                         } else {
@@ -1593,7 +1593,7 @@ int MIMEH_parse_header_parameter( struct MIMEH_header_info *hinfo,  char *data, 
                     {
                         char *string_end;
 
-                        DMIMEH LOGGER_log("%s:%d:MIMEH_parse_header_parameter:DEBUG: Using NON-quoted-string tests",FL);
+                        DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Using NON-quoted-string tests",FL, __func__);
                         string_end = strpbrk(string,"; \n\r\t");
                         if (string_end != NULL)
                         {
@@ -1607,14 +1607,14 @@ int MIMEH_parse_header_parameter( struct MIMEH_header_info *hinfo,  char *data, 
                     break;
                 } /** end of switch **/
 
-                DMIMEH LOGGER_log("%s:%d:MIMEH_parse_header_parameter:DEBUG: Extracting value out of '%s'",FL,string);
+                DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Extracting value out of '%s'",FL, __func__, string);
                 // Trim up and leading/trailing quotes
                 if (((*string == '\"')&&(*(string +strlen(string)-1) == '\"'))
                         || ((*string == '\'')&&(*(string +strlen(string)-1) == '\'')) )
                 {
                     int slen = strlen(string) -2;
                     char *s = string;
-                    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse-header_parameter:DEBUG: Stripping quotes from '%s'",FL,string);
+                    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Stripping quotes from '%s'",FL, __func__, string);
                     while (slen > 0)
                     {
                         *s = *(s+1);
@@ -1627,7 +1627,7 @@ int MIMEH_parse_header_parameter( struct MIMEH_header_info *hinfo,  char *data, 
 
                 // Now that our string is all cleaned up, save it to our output value
                 snprintf( output_value, output_value_size, "%s", string );
-                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_header_parameter:DEBUG: Final value = '%s'",FL, output_value);
+                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Final value = '%s'",FL, __func__, output_value);
             } // If the first non-whitespace char wasn't a '='
         } // If the first char after the search-string wasn't a '*'
 
@@ -1638,7 +1638,7 @@ int MIMEH_parse_header_parameter( struct MIMEH_header_info *hinfo,  char *data, 
 
     if (hl != NULL) free(hl);
 
-    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_header_parameter:DEBUG: [return=%d] Done seeking for '%s' data_end_point=%p (from %p)",FL, return_value, searchstr, *data_end_point, data);
+    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: [return=%d] Done seeking for '%s' data_end_point=%p (from %p)",FL, __func__, return_value, searchstr, *data_end_point, data);
 
     return return_value;
 }
@@ -1764,12 +1764,12 @@ int MIMEH_parse_contenttype( char *header_name, char *header_value, struct MIMEH
 
     // CONTENT TYPE -------------------------------
 
-    DMIMEH LOGGER_log("%s:%d:MIMEH_parse_contenttype:DEBUG: Start",FL);
+    DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Start",FL, __func__);
 
     p = strstr(header_name,"content-type");
     if (p != NULL)
     {
-        DMIMEH LOGGER_log("%s:%d:MIMEH_parse_contenttype: Content-type string found in header-name",FL);
+        DMIMEH LOGGER_log("%s:%d:%s: Content-type string found in header-name",FL, __func__);
 
         /** 20041216-1106:PLD: Increase our sanity **/
         hinfo->sanity++;
@@ -1821,7 +1821,7 @@ int MIMEH_parse_contenttype( char *header_name, char *header_value, struct MIMEH
              ** with that char normally, we'll convert it to something
              ** else
              **/
-            DMIMEH LOGGER_log("%s:%d:MIMEH_parse_contenttype:DEBUG: Located x-mac attachment",FL);
+            DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Located x-mac attachment",FL, __func__);
             hinfo->x_mac = 1;
             FNFILTER_set_mac(hinfo->x_mac);
         }
@@ -1900,16 +1900,16 @@ int MIMEH_parse_contenttype( char *header_name, char *header_value, struct MIMEH
                     // Move the parameter search point up to where we stopped
                     //      processing the data in the MIMEH_parse_header_parameter() call
 
-                    DMIMEH LOGGER_log("%s:%d:MIMEH_parse_contenttype:DEBUG: Pushing new filename to stack '%s'",FL, hinfo->name);
+                    DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Pushing new filename to stack '%s'",FL, __func__, hinfo->name);
                     /** Step 1:  Check to see if this filename already
                      ** exists in the stack.  We do this so that we don't
                      ** duplicate entries and also to prevent false
                      ** bad-header reports. **/
                     if (SS_cmp(&(hinfo->ss_names), hinfo->name, strlen(hinfo->name))==NULL)
                     {
-                        DMIMEH LOGGER_log("%s:%d:MIMEH_parse_contenttype:DEBUG: Filtering '%s'",FL, hinfo->name);
+                        DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Filtering '%s'",FL, __func__, hinfo->name);
                         FNFILTER_filter(hinfo->name, _MIMEH_FILENAMELEN_MAX);
-                        DMIMEH LOGGER_log("%s:%d:MIMEH_parse_contenttype:DEBUG: Pushing '%s'",FL, hinfo->name);
+                        DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Pushing '%s'",FL, __func__, hinfo->name);
                         SS_push(&(hinfo->ss_names),hinfo->name,strlen(hinfo->name));
                         if (SS_count(&(hinfo->ss_names)) > 1)
                         {
@@ -1927,10 +1927,10 @@ int MIMEH_parse_contenttype( char *header_name, char *header_value, struct MIMEH
                  ** Look for the MIME Boundary specification in the headers
                  **/
                 return_value = MIMEH_parse_header_parameter(hinfo, param, "boundary", hinfo->boundary, sizeof(hinfo->boundary), &data_end_point);
-                DMIMEH LOGGER_log("%s:%d:MIMEH_parse_contenttype:DEBUG: Param<=>data_end gap = %d", FL,data_end_point -param);
-                DMIMEH LOGGER_log("%s:%d:MIMEH_parse_contenttype:DEBUG: param start pos = '%s'",FL, param);
+                DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Param<=>data_end gap = %d", FL,data_end_point -param);
+                DMIMEH LOGGER_log("%s:%d:%s:DEBUG: param start pos = '%s'",FL, __func__, param);
                 if (data_end_point > param) param = data_end_point;
-                DMIMEH LOGGER_log("%s:%d:MIMEH_parse_contenttype:DEBUG: param start pos = '%s'",FL, param);
+                DMIMEH LOGGER_log("%s:%d:%s:DEBUG: param start pos = '%s'",FL, __func__, param);
 
                 if ( return_value == 0 ) {
                     // Move the parameter search point up to where we stopped
@@ -1938,9 +1938,9 @@ int MIMEH_parse_contenttype( char *header_name, char *header_value, struct MIMEH
 
                     //hinfo->boundary_located = 1;
                     hinfo->boundary_located++;
-                    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_contenttype:DEBUG: Pushed boundary to stack (%s)",FL, hinfo->boundary);
+                    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Pushed boundary to stack (%s)",FL, __func__, hinfo->boundary);
                     BS_push(hinfo->boundary);
-                    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_contenttype:DEBUG: Setting hinfo->boundary_located to %d",FL, hinfo->boundary_located );
+                    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Setting hinfo->boundary_located to %d",FL, __func__, hinfo->boundary_located );
 
                     if (hinfo->boundary_located > 1)
                     {
@@ -1955,9 +1955,9 @@ int MIMEH_parse_contenttype( char *header_name, char *header_value, struct MIMEH
                 //param = PLD_strtok( &tx, NULL, ";\n\r" );
                 // * PLD:20040831-22H15: Added 'if (param != NULL)' prefix to debugging lines
                 // * In response to bug #32, submitted by ICL ZA
-                if (param != NULL) DMIMEH LOGGER_log("%s:%d:MIMEH_parse_contenttype:DEBUG: param start pos = '%s'",FL, param);
+                if (param != NULL) DMIMEH LOGGER_log("%s:%d:%s:DEBUG: param start pos = '%s'",FL, __func__, param);
                 param = strpbrk( param, ";\n\r " );
-                if (param != NULL) DMIMEH LOGGER_log("%s:%d:MIMEH_parse_contenttype:DEBUG: param start pos = '%s'",FL, param);
+                if (param != NULL) DMIMEH LOGGER_log("%s:%d:%s:DEBUG: param start pos = '%s'",FL, __func__, param);
 
             } // While
         }
@@ -1965,7 +1965,7 @@ int MIMEH_parse_contenttype( char *header_name, char *header_value, struct MIMEH
 
     if (hv != NULL) free(hv);
 
-    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_contenttype:DEBUG: end.",FL);
+    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: end.",FL, __func__);
 
     return 0;
 }
@@ -1999,7 +1999,7 @@ int MIMEH_parse_contentlocation( char *header_name, char *header_value, struct M
         /** 20041216-1108:PLD: Increase our sanity **/
         hinfo->sanity++;
 
-        if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIME_parse_contentlocation:DEBUG: Content Location line found - '%s'\n", FL, header_value);
+        if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Content Location line found - '%s'\n", FL, __func__, header_value);
 
 
         p = q = header_value;
@@ -2011,7 +2011,7 @@ int MIMEH_parse_contentlocation( char *header_name, char *header_value, struct M
 
         if (p)
         {
-            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIME_parse_contentlocation:DEBUG: filename = %s\n", FL, p);
+            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: filename = %s\n", FL, __func__, p);
             snprintf(hinfo->name, sizeof(hinfo->name),"%s",p);
             snprintf(hinfo->filename, sizeof(hinfo->filename),"%s",p);
             FNFILTER_filter(hinfo->filename, _MIMEH_FILENAMELEN_MAX);
@@ -2064,27 +2064,27 @@ int MIMEH_parse_contenttransferencoding( char *header_name, char *header_value, 
         if (strstr(p,"base64"))
         {
             hinfo->content_transfer_encoding = _CTRANS_ENCODING_B64;
-            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_contenttransferencoding: Encoding set to BASE64", FL);
+            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s: Encoding set to BASE64", FL, __func__);
         }
         else if (strstr(p,"7bit"))
         {
             hinfo->content_transfer_encoding = _CTRANS_ENCODING_7BIT;
-            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_contenttransferencoding: Encoding set to 7-BIT ", FL);
+            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s: Encoding set to 7-BIT ", FL, __func__);
         }
         else if (strstr(p,"8bit"))
         {
             hinfo->content_transfer_encoding = _CTRANS_ENCODING_8BIT;
-            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_contenttransferencoding: Encoding set to 8-BIT", FL);
+            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s: Encoding set to 8-BIT", FL, __func__);
         }
         else if (strstr(p,"quoted-printable"))
         {
             hinfo->content_transfer_encoding = _CTRANS_ENCODING_QP;
-            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_contenttransferencoding: Encoding set to Quoted-Printable", FL);
+            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s: Encoding set to Quoted-Printable", FL, __func__);
         }
         else if (strstr(p,"binary"))
         {
             hinfo->content_transfer_encoding = _CTRANS_ENCODING_BINARY;
-            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_contenttransferencoding: Encoding set to Binary", FL);
+            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s: Encoding set to Binary", FL, __func__);
         }
         else if (
                 (strstr(p,"uu"))
@@ -2093,7 +2093,7 @@ int MIMEH_parse_contenttransferencoding( char *header_name, char *header_value, 
                 )
         {
             hinfo->content_transfer_encoding = _CTRANS_ENCODING_UUENCODE;
-            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_contenttransferencoding: Encoding set to UUENCODE", FL);
+            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s: Encoding set to UUENCODE", FL, __func__);
         }
         else hinfo->content_transfer_encoding = _CTRANS_ENCODING_RAW;
 
@@ -2199,7 +2199,7 @@ int MIMEH_parse_contentdisposition( char *header_name, char *header_value, struc
             *q = '\0';
         }
 
-        DMIMEH LOGGER_log("%s:%d:MIMEH_parse_contentdisposition:DEBUG: Disposition string = '%s'",FL, hv);
+        DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Disposition string = '%s'",FL, __func__, hv);
 
         // Commence to decode the disposition string into its components.
         p = strpbrk( hv, ";\t\n\r " );
@@ -2217,7 +2217,7 @@ int MIMEH_parse_contentdisposition( char *header_name, char *header_value, struc
                 int parse_result;
                 char *data_end_point;
 
-                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_contentdisposition:DEBUG: Parsing '%s'",FL,param);
+                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Parsing '%s'",FL,param);
 
                 // Seek out possible 'filename' parameters
 
@@ -2247,7 +2247,7 @@ int MIMEH_parse_contentdisposition( char *header_name, char *header_value, struc
             if ( hinfo->content_type == _CTYPE_MULTIPART_APPLEDOUBLE )
             {
                 snprintf( glb.appledouble_filename, sizeof(glb.appledouble_filename), "%s", hinfo->filename );
-                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_contentdisposition:DEBUG: Setting appledouble filename to: '%s'",FL,glb.appledouble_filename);
+                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Setting appledouble filename to: '%s'",FL,glb.appledouble_filename);
             }
 
         } // If the header-value contained ;'s ( indicating parameters )
@@ -2281,7 +2281,7 @@ int MIMEH_parse_generic( char *header_name, char *header_value, struct MIMEH_hea
     int compare_result = 0;
     int tlen;
 
-    DMIMEH LOGGER_log("%s:%d:MIMEH_parse_generic:DEBUG: Searching for %s in %s",FL,tokenstr,header_name);
+    DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Searching for %s in %s",FL,tokenstr,header_name);
     /** Sanity check the parameters **/
     if (hinfo == NULL) return -1;
     if (tokenstr == NULL) return -1;
@@ -2300,7 +2300,7 @@ int MIMEH_parse_generic( char *header_name, char *header_value, struct MIMEH_hea
             case ' ':
             case '\t':
             case '\0':
-                DMIMEH LOGGER_log("%s:%d:MIMEH_parse_generic:DEBUG: Located! Sanity up +1",FL);
+                DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Located! Sanity up +1",FL, __func__);
                 snprintf( buffer, bsize, "%s", header_value );
                 hinfo->sanity++;
                 break;
@@ -2465,7 +2465,7 @@ int MIMEH_parse_charset( char *header_name, char *header_value, struct MIMEH_hea
     int result = 0;
 
     result = MIMEH_parse_generic( header_name, header_value, hinfo, "charset", hinfo->charset, sizeof(hinfo->charset) );
-    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_charset:DEBUG: Charset value = '%s'", FL, hinfo->charset);
+    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Charset value = '%s'", FL, __func__, hinfo->charset);
 
     return result;
 }
@@ -2494,7 +2494,7 @@ int MIMEH_headers_process( struct MIMEH_header_info *hinfo, char *headers )
     char *current_header_position;
     int headerlength;
 
-    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: Start [hinfo=%p]\n",FL, hinfo);
+    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Start [hinfo=%p]\n",FL, __func__, hinfo);
 
     h = headers;
 
@@ -2505,7 +2505,7 @@ int MIMEH_headers_process( struct MIMEH_header_info *hinfo, char *headers )
     safehl = malloc(sizeof(char) *(headerlength+1));
     PLD_strncpy(safehl, h, headerlength+1);
 
-    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIME_parse_headers:DEBUG: Header length = %d\n", FL,headerlength);
+    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Header length = %d\n", FL,headerlength);
 
     MIMEH_strip_comments(h);
 
@@ -2520,7 +2520,7 @@ int MIMEH_headers_process( struct MIMEH_header_info *hinfo, char *headers )
         char *header_name_end_position;
         char *header_value_end_position;
 
-        DMIMEH LOGGER_log("%s:%d:MIMEH_headers_process:DEBUG: Processing '%s'",FL,current_header_position);
+        DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Processing '%s'",FL,current_header_position);
 
         /** Tokenise for the header 'name', ie, content-type, subject etc **/
         header_name = current_header_position;
@@ -2536,11 +2536,11 @@ int MIMEH_headers_process( struct MIMEH_header_info *hinfo, char *headers )
             // NOTE: this may activate on the true-blank lines, hence why we
             //      dump the source string, just for confirmation
 
-            DMIMEH LOGGER_log("%s:%d:MIMEH_headers_process:DEBUG: Could not locate ':' separator, using whitespace (source='%s')",FL,header_name);
+            DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Could not locate ':' separator, using whitespace (source='%s')",FL,header_name);
             header_name_end_position = strpbrk( header_name, "\t " );
             if (header_name_end_position == NULL)
             {
-                DMIMEH LOGGER_log("%s:%d:MIMEH_headers_process:DEBUG: Cannot find a header name:value pair in '%s'",FL, header_name);
+                DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Cannot find a header name:value pair in '%s'",FL, __func__, header_name);
             }
         }
 
@@ -2579,7 +2579,7 @@ int MIMEH_headers_process( struct MIMEH_header_info *hinfo, char *headers )
             //      we will 'ignore' them rather than throwing up our arms.  This
             //      ensures that we are not made to break over spurilous data.
 
-            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: This line contains no header:value pair (%s)", FL, current_header_position);
+            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: This line contains no header:value pair (%s)", FL, __func__, current_header_position);
             continue;
 
         } else {
@@ -2596,8 +2596,8 @@ int MIMEH_headers_process( struct MIMEH_header_info *hinfo, char *headers )
                 *header_value_end_position = '\0';
                 if (MIMEH_DNORMAL)
                 {
-                    LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: Header Name ='%s'", FL, header_name );
-                    LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: Header Value='%s'", FL, header_value );
+                    LOGGER_log("%s:%d:%s:DEBUG: Header Name ='%s'", FL, __func__, header_name );
+                    LOGGER_log("%s:%d:%s:DEBUG: Header Value='%s'", FL, __func__, header_value );
                 }
 
                 // To make parsing simpler, convert our
@@ -2627,7 +2627,7 @@ int MIMEH_headers_process( struct MIMEH_header_info *hinfo, char *headers )
                 }
 
             } else {
-                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_headerss:DEBUG: Header value end position is NULL",FL);
+                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%ss:DEBUG: Header value end position is NULL",FL, __func__);
             }
         }
     } // while
@@ -2664,9 +2664,9 @@ int MIMEH_headers_process( struct MIMEH_header_info *hinfo, char *headers )
     {
         free(safehl);
     }
-    else LOGGER_log("%s:%d:MIME_parse_headers:WARNING: Unable to free HEADERS allocated memory\n", FL);
+    else LOGGER_log("%s:%d:%s:WARNING: Unable to free HEADERS allocated memory\n", FL, __func__);
 
-    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: END [hinfo=%p]\n", FL, hinfo);
+    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: END [hinfo=%p]\n", FL, __func__, hinfo);
 
     return 0;
 }
@@ -2732,15 +2732,15 @@ int MIMEH_headers_get(FILE* header_file, FILE* original_header_file,  struct MIM
     hinfo->lf_count=0;
 
     if (f->linebreak == (FFGET_LINEBREAK_CR|FFGET_LINEBREAK_LF)) {
-        if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_headers_get:DEBUG: Setting to CRLF based on ffget value of %d", FL, f->linebreak);
+        if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Setting to CRLF based on ffget value of %d", FL, __func__, f->linebreak);
         snprintf(hinfo->delimeter,sizeof(hinfo->delimeter),"\r\n");
         hinfo->crlf_count = 1;
     } else if (f->linebreak == FFGET_LINEBREAK_LF) {
-        if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_headers_get:DEBUG: Setting to LF based on ffget value of %d", FL, f->linebreak);
+        if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Setting to LF based on ffget value of %d", FL, __func__, f->linebreak);
         snprintf(hinfo->delimeter,sizeof(hinfo->delimeter),"\n");
         hinfo->lf_count = 1;
     } else {
-        if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_headers_get:DEBUG: ffget value of %d offered us no guide for the delimeter", FL, f->linebreak);
+        if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: ffget value of %d offered us no guide for the delimeter", FL, __func__, f->linebreak);
     }
 
     // Initialise header defects array.
@@ -2775,7 +2775,7 @@ int MIMEH_headers_get(FILE* header_file, FILE* original_header_file,  struct MIM
     //  headers, then flag off an error
     if (glb.headerline == NULL)
     {
-        if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIME_parse_headers:DEBUG: null headerline\n", FL);
+        if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: null headerline\n", FL, __func__);
         return 1;
     }
 
@@ -2801,23 +2801,23 @@ Changes:
 int MIMEH_parse_headers( FILE* header_file, FILE* original_header_file, FFGET_FILE *f, struct MIMEH_header_info *hinfo, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers )
 {
     int result = 0;
-    DMIMEH LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: Start [F=%p, hinfo=%p]\n", FL, f, hinfo);
+    DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Start [F=%p, hinfo=%p]\n", FL, __func__, f, hinfo);
 
     /** 20041216-1100:PLD: Set the header sanity to zero **/
     if ( result == 0 ) hinfo->sanity = 0;
 
     /** Proceed to read, process and finish headers **/
-    DMIMEH LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: Getting headers",FL);
+    DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Getting headers",FL, __func__);
     if ( result == 0 ) result = MIMEH_headers_get( header_file, original_header_file, hinfo, f, unpack_metadata, save_headers_original, save_headers, glb.headerline);
-    DMIMEH LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: Processing headers",FL);
+    DMIMEH LOGGER_log("%s:%d:%s:DEBUG: Processing headers",FL, __func__);
     if ( result == 0 ) result = MIMEH_headers_process( hinfo, glb.headerline );
-    DMIMEH LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: cleanup of headers",FL);
+    DMIMEH LOGGER_log("%s:%d:%s:DEBUG: cleanup of headers",FL, __func__);
     if (glb.headerline != NULL)
     {
         free(glb.headerline);
         glb.headerline = NULL;
     }
-    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:MIMEH_parse_headers:DEBUG: END [F=%p, hinfo=%p, sanity=%d]\n", FL, f, hinfo, hinfo->sanity);
+    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: END [F=%p, hinfo=%p, sanity=%d]\n", FL, __func__, f, hinfo, hinfo->sanity);
 
     return result;
 }
@@ -2910,7 +2910,7 @@ int MIMEH_read_primary_headers( FILE* header_file, FILE* original_header_file, c
 
     f = fopen(fname,"r");
     if (!f) {
-        LOGGER_log("%s:%d:MIMEH_read_primary_headers:ERROR: Cannot open mailpack '%s' (%s)", FL, fname, strerror(errno));
+        LOGGER_log("%s:%d:%s:ERROR: Cannot open mailpack '%s' (%s)", FL, __func__, fname, strerror(errno));
         return 0;
     }
     FFGET_setstream(&F,f);
