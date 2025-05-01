@@ -1336,8 +1336,12 @@ MIME_element* MIME_decode_std_text( MIME_element* parent, FFGET_FILE *f, RIPMIME
     {
         FILE *fuue = NULL;
         FFGET_FILE * ffg = NULL;
-        char ffname[256];
-        snprintf(ffname,256,"%s/%s", unpack_metadata->dir, hinfo->filename);
+        char *fn;
+        int fn_l = strlen(unpack_metadata->dir) + strlen(hinfo->filename) + sizeof(char) * 2;
+
+        fn = malloc(fn_l);
+        snprintf(fn,fn_l,"%s/%s",unpack_metadata->dir,hinfo->filename);
+
         // PLD-20040627-1212
         // Make sure uudec_name is blank too
         //
@@ -1352,7 +1356,8 @@ MIME_element* MIME_decode_std_text( MIME_element* parent, FFGET_FILE *f, RIPMIME
         //      NOTE - this function returns the NUMBER of attachments it decoded in the return value!  Don't
         //          propergate this value unintentionally to parent functions (ie, if you were thinking it was
         //          an error-status return value
-        fuue = UUENCODE_make_file_obj (ffname);
+        fuue = UUENCODE_make_file_obj (fn);
+        free(fn);
         ffg = UUENCODE_make_sourcestream(fuue);
 
         result = UUENCODE_decode_uu( ffg, hinfo->uudec_name, 1, unpack_metadata, hinfo );
