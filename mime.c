@@ -2017,15 +2017,18 @@ hardlinks to replicate this in our output.
 Changes:
 
 \------------------------------------------------------------------*/
-int MIME_generate_multiple_hardlink_filenames(struct MIMEH_header_info *hinfo, RIPMIME_output *unpack_metadata)
+void MIME_generate_multiple_hardlink_filenames(struct MIMEH_header_info *hinfo, RIPMIME_output *unpack_metadata)
 {
     char *name;
-    char oldname[1024];
+    char *oldfn;
+    int fn_l = strlen(unpack_metadata->dir) + strlen(hinfo->filename) + sizeof(char) * 2;
 
     if (glb.multiple_filenames == 0) return 0;
 
     //LOGGER_log("%s:%d:MIME_generate_multiple_hardlink_filenames:DEBUG: Generating hardlinks for %s",FL,__func__, hinfo->filename);
-    snprintf(oldname,sizeof(oldname),"%s/%s",unpack_metadata->dir, hinfo->filename);
+    oldfn = malloc(fn_l);
+    snprintf(oldfn,fn_l,"%s/%s",unpack_metadata->dir,hinfo->filename);
+
 
     if (SS_count(&(hinfo->ss_names)) > 1){
         do {
@@ -2042,13 +2045,13 @@ int MIME_generate_multiple_hardlink_filenames(struct MIMEH_header_info *hinfo, R
                 if (np) np++; else np = name;
 
                 snprintf(newname,sizeof(newname),"%s/%s",unpack_metadata->dir, np);
-                //LOGGER_log("%s:%d:MIME_generate_multiple_hardlink_filenames:DEBUG: Linking %s->%s",FL,__func__,newname, oldname);
-                rv = link(oldname, newname);
+                //LOGGER_log("%s:%d:MIME_generate_multiple_hardlink_filenames:DEBUG: Linking %s->%s",FL,__func__,newname, oldfn);
+                rv = link(oldfn, newname);
                 if (rv == -1)
                 {
                     if (errno != EEXIST)
                     {
-                        LOGGER_log("%s:%d:%s:WARNING: While trying to create '%s' link to '%s' (%s)",FL,__func__, newname, oldname,strerror(errno));
+                        LOGGER_log("%s:%d:%s:WARNING: While trying to create '%s' link to '%s' (%s)",FL,__func__, newname, oldfn,strerror(errno));
                     }
 
                 } else {
@@ -2072,13 +2075,13 @@ int MIME_generate_multiple_hardlink_filenames(struct MIMEH_header_info *hinfo, R
                 int rv;
 
                 snprintf(newname,sizeof(newname),"%s/%s",unpack_metadata->dir, name);
-                //LOGGER_log("%s:%d:MIME_generate_multiple_hardlink_filenames:DEBUG: Linking %s->%s",FL,__func__,newname, oldname);
-                rv = link(oldname, newname);
+                //LOGGER_log("%s:%d:MIME_generate_multiple_hardlink_filenames:DEBUG: Linking %s->%s",FL,__func__,newname, oldfn);
+                rv = link(oldfn, newname);
                 if (rv == -1)
                 {
                     if (errno != EEXIST)
                     {
-                        LOGGER_log("%s:%d:%s:WARNING: While trying to create '%s' link to '%s' (%s)",FL,__func__, newname, oldname,strerror(errno));
+                        LOGGER_log("%s:%d:%s:WARNING: While trying to create '%s' link to '%s' (%s)",FL,__func__, newname, oldfn,strerror(errno));
                     }
 
                 } else {
@@ -2091,9 +2094,7 @@ int MIME_generate_multiple_hardlink_filenames(struct MIMEH_header_info *hinfo, R
 
         } while(name != NULL);
     }
-
-    return 0;
-
+    free(oldfn);
 }
 
 MIME_element * resencapsulate(MIME_element *decoded_mime, int decode_result, struct MIMEH_header_info *hinfo)
