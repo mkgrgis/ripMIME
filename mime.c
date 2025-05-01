@@ -2023,16 +2023,18 @@ void MIME_generate_multiple_hardlink_filenames(struct MIMEH_header_info *hinfo, 
     char *oldfn;
     int fn_l = strlen(unpack_metadata->dir) + strlen(hinfo->filename) + sizeof(char) * 2;
 
-    if (glb.multiple_filenames == 0) return 0;
+    if (glb.multiple_filenames == 0)
+       return;
 
     //LOGGER_log("%s:%d:MIME_generate_multiple_hardlink_filenames:DEBUG: Generating hardlinks for %s",FL,__func__, hinfo->filename);
     oldfn = malloc(fn_l);
     snprintf(oldfn,fn_l,"%s/%s",unpack_metadata->dir,hinfo->filename);
 
 
-    if (SS_count(&(hinfo->ss_names)) > 1){
-        do {
-
+    if (SS_count(&(hinfo->ss_names)) > 1)
+    {
+        do
+        {
             name = SS_pop(&(hinfo->ss_names));
             if (name != NULL)
             {
@@ -2061,13 +2063,12 @@ void MIME_generate_multiple_hardlink_filenames(struct MIMEH_header_info *hinfo, 
                     }
                 }
             }
-
         } while(name != NULL);
     }
 
     if (SS_count(&(hinfo->ss_filenames)) > 1) {
-        do {
-
+        do
+        {
             name = SS_pop(&(hinfo->ss_filenames));
             if (name != NULL)
             {
@@ -2091,7 +2092,6 @@ void MIME_generate_multiple_hardlink_filenames(struct MIMEH_header_info *hinfo, 
                     }
                 }
             }
-
         } while(name != NULL);
     }
     free(oldfn);
@@ -2667,7 +2667,7 @@ int MIME_unpack_stage2( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, st
     /** 20041216-1102:PLD: Keep attempting to read headers until we get a sane set **/
     do {
         /** Read next set of headers, repeat until a sane set of headers are found **/
-        result = MIMEH_parse_headers(NULL, NULL, input_f,h,unpack_metadata->dir, 0, 0);
+        result = MIMEH_parse_headers(NULL, NULL, input_f,h,unpack_metadata, 0, 0);
         DMIME LOGGER_log("%s:%d:%s:DEBUG: Parsing of headers done, sanity = %d, result = %d",FL,__func__,h->sanity, result);
     } while ((h->sanity == 0)&&(result != -1));
 
@@ -2769,7 +2769,7 @@ int MIME_unpack_stage2( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, st
 
                     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding headers...\n",FL,__func__);
                     do {
-                        result = MIMEH_parse_headers(NULL, NULL, input_f, h, unpack_metadata->dir, 0, 0);
+                        result = MIMEH_parse_headers(NULL, NULL, input_f, h, unpack_metadata, 0, 0);
                     } while ((h->sanity == 0)&&(result != -1));
 
                     glb.header_defect_count += MIMEH_get_defect_count(h);
