@@ -578,7 +578,7 @@ int MIMEH_save_doubleCR( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct 
 {
     int c;
     MIME_element* cur_mime = NULL;
-    
+
     glb.doubleCR_count++;
     snprintf(glb.doubleCRname,_MIMEH_STRLEN_MAX,"%s/%s_doubleCR.%d_", unpack_metadata->dir, hinfo->filename, glb.doubleCR_count);
 

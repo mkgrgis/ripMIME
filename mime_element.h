@@ -35,6 +35,7 @@ typedef struct {
 	char* name;
 	char* mem_filearea;
 	size_t mem_filearea_l;
+	int decode_result_code;
 } MIME_element;
 
 typedef struct {
@@ -68,6 +69,7 @@ MIME_element* MIME_element_add (
 void MIME_element_deactivate (MIME_element* cur, RIPMIME_output *unpack_metadata);
 void printArray(dynamic_array* container);
 void freeArray(dynamic_array* container, RIPMIME_output *unpack_metadata);
+void write_all_to_FS_files(RIPMIME_output *unpack_metadata, int rename_method);
 
 int MIME_test_uniquename( char *path, char *fname, int method );
 

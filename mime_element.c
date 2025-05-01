@@ -69,6 +69,7 @@ MIME_element* MIME_element_add(struct MIME_element* parent, RIPMIME_output *unpa
 	fullpath_len = strlen(unpack_metadata->dir) + strlen(filename) + 3 * sizeof(char);
 	insertItem(all_MIME_elements.mime_arr, cur);
 	cur->parent = parent;
+	cur->decode_result_code = -1;
 	cur->id = all_MIME_elements.mime_count++;
 	cur->directory = unpack_metadata->dir;
 	cur->filename = dup_ini(filename);
@@ -294,9 +295,8 @@ void write_FS_file(MIME_element* cur, int rename_method)
 
 void write_all_to_FS_files(RIPMIME_output *unpack_metadata, int rename_method)
 {
-	int i = 0;
-
-	for (; i < all_MIME_elements.mime_count; i++);
+	int i;
+	for (i = 0; i < all_MIME_elements.mime_count; i++)
 	{
 		MIME_element*  m = getItem(all_MIME_elements.mime_arr, i);
 		write_FS_file(m, rename_method);

@@ -66,6 +66,11 @@ int MIME_unpack_mailbox( RIPMIME_output *unpack_metadata, char *mpname, int curr
 int MIME_handle_multipart( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss );
 int MIME_handle_rfc822( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss );
 
+MIME_element* MIME_decode_std_raw(  MIME_element* parent, FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo);
+MIME_element* MIME_decode_std_text( MIME_element* parent, FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo );
+MIME_element* MIME_decode_std_64(   MIME_element* parent, FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo );
+
+
 // Predefined filenames
 #define MIME_BLANKZONE_FILENAME_DEFAULT "_blankzone_"
 #define MIME_HEADERS_FILENAME "_headers_"
@@ -1124,13 +1129,13 @@ int MIME_decode_OLE_file( RIPMIME_output *unpack_metadata, FILE *f )
 
 
 /*------------------------------------------------------------------------
-Procedure:     MIME_decode_raw ID:1
+Procedure:     MIME_decode_std_raw ID:1
 Purpose:       Decodes a binary type attachment, ie, no encoding, just raw data.
 Input:
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, MIME_element* decoded_mime )
+MIME_element* MIME_decode_std_raw(MIME_element* parent, FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo)
 {
     int result = 0;
     int bufsize=1024;
@@ -1182,7 +1187,7 @@ int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIME
 
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UUencoded data\n",FL,__func__);
         if ( hinfo->content_transfer_encoding == _CTRANS_ENCODING_UUENCODE ) decode_entire_file = 0;
-      
+
         ffg = UUENCODE_make_sourcestream(cur_mime->f); /* fseek to begin is here */
         result = UUENCODE_decode_uu(ffg , hinfo->uudec_name, decode_entire_file, unpack_metadata, hinfo );
         if (result == -1)
@@ -1197,12 +1202,14 @@ int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIME
 
                 case UUENCODE_STATUS_CANNOT_ALLOCATE_MEMORY:
                     LOGGER_log("%s:%d:%s:ERROR: Failure to allocate memory for UUdecode process",FL,__func__);
-                    return -1;
+                    cur_mime->decode_result_code = -1;
+                    return cur_mime;
                     break;
 
                 default:
                     LOGGER_log("%s:%d:%s:ERROR: Unknown return code from UUDecode process [%d]",FL,__func__,uuencode_error);
-                    return -1;
+                    cur_mime->decode_result_code = -1;
+                    return cur_mime;
             }
         }
         if (result == UUENCODE_STATUS_SHORT_FILE) result = 0;
@@ -1222,18 +1229,19 @@ int MIME_decode_raw( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIME
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Closed file and free'd buffer\n",FL,__func__);
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: End[result = %d]\n",FL,__func__,result);
-    return result;
+    cur_mime->decode_result_code = result;
+    return cur_mime;
 }
 
 /*------------------------------------------------------------------------
-Procedure:     MIME_decode_text ID:1
+Procedure:     MIME_decode_std_text ID:1
 Purpose:       Decodes an input stream into a text file.
 Input:         unpackdir : directory where to place new text file
 hinfo : struct containing information from the last parsed headers
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, MIME_element* decoded_mime )
+MIME_element* MIME_decode_std_text( MIME_element* parent, FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo )
 {
     int linecount = 0;                  // The number of lines
     int file_has_uuencode = 0;          // Flag to indicate this text has UUENCODE in it
@@ -1251,7 +1259,8 @@ int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIM
     {
         /** If we cannot open the file for reading, leave an error and return -1 **/
         LOGGER_log("%s:%d:%s:ERROR: print-quotable input stream broken.",FL,__func__);
-        return _EXITERR_MIMEREAD_CANNOT_OPEN_INPUT;
+        cur_mime->decode_result_code = _EXITERR_MIMEREAD_CANNOT_OPEN_INPUT;
+        return cur_mime;
     }
     if (f)
     {
@@ -1301,8 +1310,8 @@ int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIM
 
         if (linecount == 0)
         {
-            result = MIME_STATUS_ZERO_FILE;
-            return result;
+            cur_mime->decode_result_code = MIME_STATUS_ZERO_FILE;
+            return cur_mime;
         }
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Closed.",FL,__func__);
     } // if main input file stream was open
@@ -1356,11 +1365,13 @@ int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIM
                     break;
                 case UUENCODE_STATUS_CANNOT_ALLOCATE_MEMORY:
                     LOGGER_log("%s:%d:%s:ERROR: Failure to allocate memory for UUdecode process",FL,__func__);
-                    return -1;
+                    cur_mime->decode_result_code = -1;
+                    return cur_mime;
                     break;
                 default:
                     LOGGER_log("%s:%d:%s:ERROR: Unknown return code from UUDecode process [%d]",FL,__func__,uuencode_error);
-                    return -1;
+                    cur_mime->decode_result_code = -1;
+                    return cur_mime;
             }
         }
         if ( result > 0 ) { glb.attachment_count += result; result = 0; }
@@ -1375,11 +1386,12 @@ int MIME_decode_text( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIM
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Completed decoding UUencoded data.\n",FL,__func__);
     }
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: result=%d ----------------Done\n",FL,__func__,result);
-    return result;
+    cur_mime->decode_result_code = result;
+    return cur_mime;
 }
 
 /*------------------------------------------------------------------------
-Procedure:     MIME_decode_64 ID:1
+Procedure:     MIME_decode_std_64 ID:1
 Purpose:       This routine is very very very important, it's the key to ensuring
 we get our attachments out of the email file without trauma!
 NOTE - this has been -slightly altered- in order to make provision
@@ -1394,7 +1406,7 @@ struct MIMEH_header_info *hinfo: Auxillairy information such as the destination 
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, MIME_element* decoded_mime )
+MIME_element* MIME_decode_std_64( MIME_element* parent, FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo )
 {
     int i;
     int cr_total = 0;
@@ -1423,7 +1435,8 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
     cur_mime = MIME_element_add (NULL, unpack_metadata, hinfo->filename, hinfo->content_type_string, hinfo->content_transfer_encoding_string, hinfo->name, hinfo->current_recursion_level, glb.attachment_count, glb.filecount, __func__);
     if (cur_mime->f == NULL)
     {
-        return -1;
+        cur_mime->decode_result_code = -1;
+        return cur_mime;
     }
 
     // Allocate the write buffer.  By using the write buffer we gain an additional 10% in performance
@@ -1432,7 +1445,8 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
     if (!writebuffer)
     {
         LOGGER_log("%s:%d:%s:ERROR: cannot allocate %dbytes of memory for the write buffer",FL,__func__, _MIME_WRITE_BUFFER_SIZE);
-        return -1;
+        cur_mime->decode_result_code = -1;
+        return cur_mime;
     }
     else {
         wbpos = writebuffer;
@@ -1573,8 +1587,10 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
                 status = MIME_ERROR_B64_INPUT_STREAM_EOF;
                 fwrite(writebuffer, 1, wbcount, cur_mime->f);
                 MIME_element_deactivate(cur_mime, unpack_metadata);
-                if (writebuffer) free(writebuffer);
-                return status;
+                if (writebuffer)
+                   free(writebuffer);
+                cur_mime->decode_result_code = status;
+                return cur_mime;
                 break;
             } /* if c was the EOF */
             else if (c == '=')
@@ -1678,16 +1694,20 @@ int MIME_decode_64( FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH
                 status = MIME_BASE64_STATUS_HIT_BOUNDARY; // was _BOUNDARY_CRASH
             }
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: File size = %ld bytes, Exit Status = %d, Boundary Crash = %d\n",FL,__func__, bytecount, status, boundary_crash);
-            if (writebuffer) free(writebuffer);
-            return status;
+            if (writebuffer)
+               free(writebuffer);
+            cur_mime->decode_result_code = status;
+            return cur_mime;
         } // if End-of-MIME or Stopchars appeared
     } // while
-    if (writebuffer) free(writebuffer);
-    return status;
+    if (writebuffer)
+       free(writebuffer);
+    cur_mime->decode_result_code = status;
+    return cur_mime;
 }
 
 /*-----------------------------------------------------------------\
-  Function Name : MIME_decode_64_cleanup
+  Function Name : MIME_decode_std_64_cleanup
   Returns Type  : int
   ----Parameter List
   1. FFGET_FILE *f,
@@ -1703,7 +1723,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIME_decode_64_cleanup( FFGET_FILE *f)
+int MIME_decode_std_64_cleanup( FFGET_FILE *f)
 {
     int result = 0;
     char buffer[128];
@@ -2068,6 +2088,17 @@ int MIME_generate_multiple_hardlink_filenames(struct MIMEH_header_info *hinfo, R
 
 }
 
+MIME_element * resencapsulate(MIME_element *decoded_mime, int decode_result, struct MIMEH_header_info *hinfo)
+{
+    if (decoded_mime == NULL)
+    {
+        decoded_mime = malloc(sizeof(MIME_element));
+        if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoded MIME NULL!! filename = '%s'",FL,__func__,hinfo->filename);
+    }
+    decoded_mime->decode_result_code = decode_result;
+    return decoded_mime;
+}
+
 /*------------------------------------------------------------------------
 Procedure:     MIME_process_content_transfer_encoding ID:1
 Purpose:       Based on the contents of hinfo, this function will call the
@@ -2077,10 +2108,10 @@ Input:
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_process_content_transfer_encoding( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, struct SS_object *ss )
+MIME_element* MIME_process_content_transfer_encoding( MIME_element* parent_mime, FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, struct SS_object *ss )
 {
     int keep = 1;
-    int result = -1;
+    int decode_result = -1;
     MIME_element* decoded_mime = NULL;
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Start:DEBUG: (%s)\n",FL,__func__, hinfo->filename);
@@ -2195,15 +2226,16 @@ int MIME_process_content_transfer_encoding( FFGET_FILE *input_f, RIPMIME_output 
     {
         case _CTRANS_ENCODING_B64:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding BASE64 format\n",FL,__func__);
-            result = MIME_decode_64(input_f, unpack_metadata, hinfo, decoded_mime);
-            switch (result) {
+            decoded_mime = MIME_decode_std_64(parent_mime, input_f, unpack_metadata, hinfo);
+            decode_result = decoded_mime->decode_result_code;
+            switch (decode_result) {
                 case MIME_ERROR_B64_INPUT_STREAM_EOF:
                     break;
                 case MIME_BASE64_STATUS_HIT_BOUNDARY:
-                    result = 0;
+                    decode_result = 0;
                     break;
                 case 0:
-                    result = MIME_decode_64_cleanup(input_f);
+                    decode_result = MIME_decode_std_64_cleanup(input_f);
                     break;
                 default:
                     break;
@@ -2211,47 +2243,55 @@ int MIME_process_content_transfer_encoding( FFGET_FILE *input_f, RIPMIME_output 
             break;
         case _CTRANS_ENCODING_7BIT:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding 7BIT format\n",FL,__func__);
-            result = MIME_decode_text(input_f, unpack_metadata, hinfo, decoded_mime);
+
+ decoded_mime = MIME_decode_std_text(parent_mime, input_f, unpack_metadata, hinfo);decode_result = decoded_mime->decode_result_code;
             break;
         case _CTRANS_ENCODING_8BIT:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding 8BIT format\n",FL,__func__);
-            result = MIME_decode_text(input_f, unpack_metadata, hinfo, decoded_mime);
+            decoded_mime = MIME_decode_std_text(parent_mime, input_f, unpack_metadata, hinfo);
+            decode_result = decoded_mime->decode_result_code;
             break;
         case _CTRANS_ENCODING_BINARY:
         case _CTRANS_ENCODING_RAW:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding RAW format\n",FL,__func__);
-            result = MIME_decode_raw(input_f, unpack_metadata, hinfo, decoded_mime);
+            decoded_mime = MIME_decode_std_raw(parent_mime, input_f, unpack_metadata, hinfo);
+            decode_result = decoded_mime->decode_result_code;
             break;
         case _CTRANS_ENCODING_QP:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding Quoted-Printable format\n",FL,__func__);
-            result = MIME_decode_text(input_f, unpack_metadata, hinfo, decoded_mime);
+            decoded_mime = MIME_decode_std_text(parent_mime, input_f, unpack_metadata, hinfo);
+            decode_result = decoded_mime->decode_result_code;
             break;
         case _CTRANS_ENCODING_UUENCODE:
+            int fcount;
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UUENCODED format\n",FL,__func__);
             // Added as a test - remove if we can get this to work in a better way
             snprintf(hinfo->uudec_name,sizeof(hinfo->uudec_name),"%s",hinfo->filename);
-            result = UUENCODE_decode_uu(input_f, hinfo->uudec_name, 0, unpack_metadata, hinfo );
-            glb.attachment_count += result;
+            fcount = UUENCODE_decode_uu(input_f, hinfo->uudec_name, 0, unpack_metadata, hinfo );
+            glb.attachment_count += fcount;
             // Because this is a file-count, it's not really an 'error result' as such, so, set the
             //      return code back to 0!
-            result = 0;
+            decode_result = 0;
             break;
         case _CTRANS_ENCODING_UNKNOWN:
             switch (hinfo->content_disposition) {
                 case _CDISPOSITION_FORMDATA:
                     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UNKNOWN format of FORMDATA disposition\n",FL,__func__);
-                    result = MIME_decode_raw(input_f, unpack_metadata, hinfo, decoded_mime);
+                    decoded_mime = MIME_decode_std_raw(parent_mime, input_f, unpack_metadata, hinfo);
+                    decode_result = decoded_mime->decode_result_code;
                     break;
                 default:
                     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UNKNOWN format\n",FL,__func__);
-                    result = MIME_decode_text(input_f, unpack_metadata, hinfo, decoded_mime);
+                    decoded_mime = MIME_decode_std_text(parent_mime, input_f, unpack_metadata, hinfo);
+                    decode_result = decoded_mime->decode_result_code;
             }
-            if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: UNKNOWN Decode completed, result = %d\n",FL,__func__,result);
+            if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: UNKNOWN Decode completed, result = %d\n",FL,__func__,decode_result);
             break;
         case _CTRANS_ENCODING_UNSPECIFIED:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding UNSPECIFIED format\n",FL,__func__);
-            result = MIME_decode_text(input_f, unpack_metadata, hinfo, decoded_mime);
-            if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding result for UNSPECIFIED format = %d\n",FL,__func__, result);
+            decoded_mime = MIME_decode_std_text(parent_mime, input_f, unpack_metadata, hinfo);
+            decode_result = decoded_mime->decode_result_code;
+            if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding result for UNSPECIFIED format = %d\n",FL,__func__, decode_result);
             // 20040114-1236:PLD: Added nested mail checking
             //
             // Sometimes mailpacks have false headers at the start, resulting
@@ -2271,33 +2311,34 @@ int MIME_process_content_transfer_encoding( FFGET_FILE *input_f, RIPMIME_output 
             if (MIME_is_diskfile_RFC822(fn) > 0 )
             {
                 // 20040305-1304:PLD: unpack the file, propagate result upwards
-                result = MIME_unpack_single_diskfile( unpack_metadata, fn, (hinfo->current_recursion_level+ 1),ss );
+                decode_result = MIME_unpack_single_diskfile( unpack_metadata, fn, (hinfo->current_recursion_level+ 1),ss );
             }
-            free(fn);   
+            free(fn);
             break;
         default:
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding format is not defined (%d)\n",FL,__func__, hinfo->content_transfer_encoding);
-            result = MIME_decode_raw(input_f, unpack_metadata, hinfo, decoded_mime);
+            decoded_mime = MIME_decode_std_raw(parent_mime, input_f, unpack_metadata, hinfo);
+            decode_result = decoded_mime->decode_result_code;
             break;
     }
     // Analyze our results
-    switch (result) {
+    switch (decode_result) {
         case 0:
             break;
         case MIME_STATUS_ZERO_FILE:
-            return MIME_STATUS_ZERO_FILE;
+            return resencapsulate(decoded_mime, MIME_STATUS_ZERO_FILE, hinfo);
             break;
         case MIME_ERROR_FFGET_EMPTY:
-            return result;
+            return resencapsulate(decoded_mime, decode_result, hinfo);
             break;
         case MIME_ERROR_RECURSION_LIMIT_REACHED:
-            return result;
+            return resencapsulate(decoded_mime, decode_result, hinfo);
             break;
         default:
-            return result;
+            return resencapsulate(decoded_mime, decode_result, hinfo);
     }
 
-    if ((result != -1)&&(result != MIME_STATUS_ZERO_FILE))
+    if ((decode_result != -1)&&(decode_result != MIME_STATUS_ZERO_FILE))
     {
 #ifdef RIPOLE
         // If we have OLE decoding active and compiled in, then
@@ -2342,16 +2383,16 @@ int MIME_process_content_transfer_encoding( FFGET_FILE *input_f, RIPMIME_output 
                 snprintf(fn,fn_l,"%s/%s",unpack_metadata->dir,hinfo->filename);
 
                 // 20040305-1304:PLD: unpack the file, propagate result upwards
-                result = MIME_unpack_single_diskfile( unpack_metadata, fn, (hinfo->current_recursion_level+ 1),ss );
+                decode_result = MIME_unpack_single_diskfile( unpack_metadata, fn, (hinfo->current_recursion_level+ 1),ss );
                 free(fn);
             }
         } // Decode MHT files
-    } // If result != -1
+    } // If decode_result != -1
     // End.
 
     MIME_generate_multiple_hardlink_filenames(hinfo,unpack_metadata);
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Done for filename = '%s'",FL,__func__,hinfo->filename);
-    return result;
+    return resencapsulate(decoded_mime, decode_result, hinfo);
 }
 
 /*------------------------------------------------------------------------
@@ -2375,6 +2416,7 @@ int MIME_postdecode_cleanup( RIPMIME_output *unpack_metadata, struct SS_object *
             char *fn;
             int fn_l = strlen(unpack_metadata->dir) + strlen(filename) + sizeof(char) * 2;
 
+            fn = malloc(fn_l);
             snprintf(fn,fn_l,"%s/%s",unpack_metadata->dir,filename);
 
             result = unlink( fn );
@@ -2410,6 +2452,9 @@ Changes:
 \------------------------------------------------------------------*/
 int MIME_handle_multipart( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss )
 {
+    MIME_element* parent_mime = NULL;
+    MIME_element* decoded_mime = NULL;
+
     int result = 0;
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding multipart/embedded \n",FL,__func__);
     // If there is no filename, then we have a "standard"
@@ -2433,7 +2478,8 @@ int MIME_handle_multipart( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata,
         if (p) PLD_strncpy(h->boundary, p,sizeof(h->boundary));
     } else {
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Embedded message has a filename, decoding to file %s",FL,__func__,h->filename);
-        result = MIME_process_content_transfer_encoding( input_f, unpack_metadata, h, ss );
+        decoded_mime = MIME_process_content_transfer_encoding( parent_mime, input_f, unpack_metadata, h, ss );
+        result = decoded_mime->decode_result_code;
         if (result == 0)
         {
             char *fn;
@@ -2476,6 +2522,9 @@ Changes:
 \------------------------------------------------------------------*/
 int MIME_handle_rfc822( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss )
 {
+    MIME_element* parent_mime = NULL;
+    MIME_element* decoded_mime = NULL;
+
     /** Decode a RFC822 encoded stream of data from *input_f  **/
     int result = 0;
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding RFC822 message\n",FL,__func__);
@@ -2505,7 +2554,8 @@ int MIME_handle_rfc822( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, st
     } else {
         /** ...else... if the section has a filename or B64 type encoding, we need to put it through extra decoding **/
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Embedded message has a filename, decoding to file %s",FL,__func__,h->filename);
-        result = MIME_process_content_transfer_encoding( input_f, unpack_metadata, h, ss );
+        decoded_mime = MIME_process_content_transfer_encoding( parent_mime, input_f, unpack_metadata, h, ss );
+        result = decoded_mime->decode_result_code;
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Result of extracting %s is %d",FL,__func__,h->filename, result);
         if (result == 0) {
             char * fn;
@@ -2549,10 +2599,14 @@ Changes:
 \------------------------------------------------------------------*/
 int MIME_handle_plain( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss )
 {
+    MIME_element* parent_mime = NULL;
+    MIME_element* decoded_mime = NULL;
+
     /** Handle a plain text encoded data stream from *input_f **/
     int result = 0;
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Handling plain email",FL,__func__);
-    result = MIME_process_content_transfer_encoding( input_f, unpack_metadata, h, ss );
+    decoded_mime = MIME_process_content_transfer_encoding( parent_mime, input_f, unpack_metadata, h, ss );
+    result = decoded_mime->decode_result_code;
     if ((result == MIME_ERROR_FFGET_EMPTY)||(result == 0))
     {
         /** Test for RFC822 content... if so, go decode it **/
@@ -2584,6 +2638,8 @@ int MIME_unpack_stage2( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, st
 {
     int result = 0;
     struct MIMEH_header_info *h;
+    MIME_element* parent_mime = NULL;
+    MIME_element* decoded_mime = NULL;
     char *p;
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Start, recursion %d\n",FL,__func__, current_recursion_level);
@@ -2684,7 +2740,8 @@ int MIME_unpack_stage2( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, st
         // Decode the data in the current MIME segment
         // based on the header information retrieved from
         // the start of this function.
-        result = MIME_process_content_transfer_encoding(input_f, unpack_metadata, h, ss);
+        decoded_mime = MIME_process_content_transfer_encoding( parent_mime, input_f, unpack_metadata, h, ss);
+        result = decoded_mime->decode_result_code;
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Done decoding, result = %d",FL,__func__,result);
         if (result == 0)
         {
@@ -2798,7 +2855,8 @@ int MIME_unpack_stage2( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, st
 
                         } else {
                             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: RFC822 Message to be decoded...\n",FL,__func__);
-                            result = MIME_process_content_transfer_encoding( input_f, unpack_metadata, h, ss );
+                            decoded_mime = MIME_process_content_transfer_encoding( parent_mime, input_f, unpack_metadata, h, ss );
+                            result = decoded_mime->decode_result_code;
                             if (result != 0) return result; // 20040305-1313:PLD
                             else
                             {
@@ -2822,7 +2880,8 @@ int MIME_unpack_stage2( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, st
                             // multipart or RFC822 embedded email, we can then simply use
                             // the normal decoding function to interpret its data.
                             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding a normal attachment \n",FL,__func__);
-                            result = MIME_process_content_transfer_encoding( input_f, unpack_metadata, h, ss );
+                            decoded_mime = MIME_process_content_transfer_encoding( parent_mime, input_f, unpack_metadata, h, ss );
+                            result = decoded_mime->decode_result_code;
 
                             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding a normal attachment '%s' done. \n",FL,__func__, h->filename);
                             // See if we have an attachment output which is actually another
