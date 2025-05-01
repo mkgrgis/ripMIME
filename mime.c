@@ -1081,10 +1081,12 @@ Changes:
 int MIME_decode_OLE_diskfile( RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo )
 {
     struct OLE_object ole;
-    char fullpath[1024];
     int result;
+    char *fn;
+    int fn_l = strlen(unpack_metadata->dir) + strlen(hinfo->filename) + sizeof(char) * 2;
 
-    snprintf(fullpath,sizeof(fullpath),"%s/%s",unpack_metadata->dir,hinfo->filename);
+    fn = malloc(fn_l);
+    snprintf(fn,fn_l,"%s/%s",unpack_metadata->dir,hinfo->filename);
 
     OLE_init(&ole);
     OLE_set_quiet(&ole,glb.quiet);
@@ -1094,7 +1096,8 @@ int MIME_decode_OLE_diskfile( RIPMIME_output *unpack_metadata, struct MIMEH_head
     OLE_set_filename_report_fn(&ole, MIME_report_filename_decoded_RIPOLE );
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Starting OLE Decode",FL,__func__);
-    result = OLE_decode_diskfile(&ole, fullpath, unpack_metadata );
+    result = OLE_decode_diskfile(&ole, fn, unpack_metadata );
+    free(fn);
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decode done, cleaning up.",FL,__func__);
     OLE_decode_done(&ole);
     if (ole.f)
