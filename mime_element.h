@@ -21,6 +21,7 @@ struct mime_output
 	int unpack_mode;
 	// int fragment_number; will be used later
 	int rename_method;
+	int unique_names; // flague
 };
 typedef struct mime_output RIPMIME_output;
 
@@ -72,6 +73,6 @@ void printArray(dynamic_array* container);
 void freeArray(dynamic_array* container, RIPMIME_output *unpack_metadata);
 void write_all_to_FS_files(RIPMIME_output *unpack_metadata);
 
-int MIME_test_uniquename( char *path, char *fname, int method );
+int MIME_test_uniquename( RIPMIME_output *unpack_metadata, char *fname );
 
 #endif

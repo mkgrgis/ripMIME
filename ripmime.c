@@ -347,15 +347,15 @@ int RIPMIME_parse_parameters (struct RIPMIME_globals *glb, int argc, char **argv
                        }
                        else if (strncmp (&(argv[i][2]), "overwrite", 9) == 0)
                        {
-                           MIME_set_uniquenames (0);
+                           glb->output->unique_names = 0;
                        }
                        else if (strncmp (&(argv[i][2]), "unique_names", 12) == 0)
                        {
-                           MIME_set_uniquenames (1);
+                           glb->output->unique_names = 1;
                        }
                        else if (strncmp (&(argv[i][2]), "unique-names", 12) == 0)
                        {
-                           MIME_set_uniquenames (1);
+                           glb->output->unique_names = 1;
                        }
                        else if (strncmp(&(argv[i][2]), "name-by-type", 12) == 0)
                        {
@@ -532,6 +532,7 @@ int RIPMIME_init (struct RIPMIME_globals *glb, RIPMIME_output *o)
    glb->output->dir = defaultdir;
    glb->output->unpack_mode = RIPMIME_UNPACK_MODE_TO_DIRECTORY;
    glb->output->rename_method = _MIME_RENAME_METHOD_INFIX;
+   glb->output->unique_names = 1;
    glb->inputfile = NULL;
    glb->use_return_codes = 0;
    glb->timeout = 0;
@@ -717,7 +718,6 @@ int main (int argc, char **argv)
 
    // Setup our default behaviours */
 
-   MIME_set_uniquenames (1);
    MIME_set_paranoid (0);
    MIME_set_header_longsearch(1); // 20040310-0117:PLD - Added by default as it seems stable, use --disable-qmail-bounce to turn off
 

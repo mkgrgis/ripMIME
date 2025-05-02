@@ -140,7 +140,6 @@ struct MIME_globals {
     int quiet;
     int syslogging;
     int stderrlogging;
-    int unique_names;
     char headersname[_MIME_STRLEN_MAX];
     char tempdirectory[_MIME_STRLEN_MAX];
     int save_headers;
@@ -798,19 +797,6 @@ Errors:
 int MIME_set_no_nameless( int level )
 {
     glb.no_nameless = level;
-    return 0;
-}
-
-/*------------------------------------------------------------------------
-Procedure:     MIME_set_uniquenames ID:1
-Purpose:
-Input:
-Output:
-Errors:
-------------------------------------------------------------------------*/
-int MIME_set_uniquenames( int level )
-{
-    glb.unique_names = level;
     return 0;
 }
 
@@ -1945,7 +1931,6 @@ void MIME_init( void )
     glb.quiet = 0;
     glb.syslogging = 0;
     glb.stderrlogging = 1;
-    glb.unique_names = 0;
     glb.save_headers = 0;
     glb.no_nameless = 0;
     glb.mailbox_format = 0;
@@ -2150,9 +2135,9 @@ MIME_element* MIME_process_content_transfer_encoding( MIME_element* parent_mime,
     // If we are required to have "unique" filenames for everything, rather than
     //  allowing ripMIME to overwrite stuff, then we put the filename through
     //      its tests here
-    if ((glb.unique_names)&&(keep))
+    if ((unpack_metadata->unique_names)&&(keep))
     {
-        MIME_test_uniquename( unpack_metadata->dir, hinfo->filename, unpack_metadata->rename_method );
+        MIME_test_uniquename( unpack_metadata, hinfo->filename );
     }
     // If the calling program requested verbosity, then indicate that we're decoding
     //      the file here

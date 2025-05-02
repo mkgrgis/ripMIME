@@ -181,13 +181,11 @@ static inline int get_random_value(void) {
 Procedure:     MIME_test_uniquename ID:1
 Purpose:       Checks to see that the filename specified is unique. If it's not
 unique, it will modify the filename
-Input:         char *path: Path in which to look for similar filenames
-char *fname: Current filename
-int method: Method of altering the filename (infix, postfix, prefix, randinfix, randpostfix, randprefix)
+char *fname:   filename
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_test_uniquename( char *path, char *fname, int method )
+int MIME_test_uniquename( RIPMIME_output *unpack_metadata, char *fname )
 {
 	struct stat buf;
 
@@ -201,7 +199,7 @@ int MIME_test_uniquename( char *path, char *fname, int method )
 
 	frontname = extention = NULL;  // shuts the compiler up
 
-	if (method == _MIME_RENAME_METHOD_INFIX)
+	if (unpack_metadata->rename_method == _MIME_RENAME_METHOD_INFIX)
 	{
 		PLD_strncpy(scr,fname, _FS_PATH_MAX);
 		frontname = scr;
@@ -214,11 +212,11 @@ int MIME_test_uniquename( char *path, char *fname, int method )
 		}
 		else
 		{
-			method = _MIME_RENAME_METHOD_POSTFIX;
+			unpack_metadata->rename_method = _MIME_RENAME_METHOD_POSTFIX;
 		}
 	}
 
-	if (method == _MIME_RENAME_METHOD_RANDINFIX)
+	if (unpack_metadata->rename_method == _MIME_RENAME_METHOD_RANDINFIX)
 	{
 		PLD_strncpy(scr,fname, _FS_PATH_MAX);
 		frontname = scr;
@@ -231,11 +229,11 @@ int MIME_test_uniquename( char *path, char *fname, int method )
 		}
 		else
 		{
-			method = _MIME_RENAME_METHOD_RANDPOSTFIX;
+			unpack_metadata->rename_method = _MIME_RENAME_METHOD_RANDPOSTFIX;
 		}
 	}
 
-	snprintf(newname, _FS_PATH_MAX,"%s/%s",path,fname);
+	snprintf(newname, _FS_PATH_MAX,"%s/%s",unpack_metadata->dir,fname);
 	while (!cleared)
 	{
 		if ((stat(newname, &buf) == -1))
@@ -246,24 +244,24 @@ int MIME_test_uniquename( char *path, char *fname, int method )
 		{
 			int randval = get_random_value();
 
-			switch (method) {
+			switch (unpack_metadata->rename_method) {
 				case _MIME_RENAME_METHOD_PREFIX:
-					snprintf(newname, _FS_PATH_MAX,"%s/%d_%s",path,count,fname);
+					snprintf(newname, _FS_PATH_MAX,"%s/%d_%s",unpack_metadata->dir,count,fname);
 					break;
 				case _MIME_RENAME_METHOD_INFIX:
-					snprintf(newname, _FS_PATH_MAX,"%s/%s_%d.%s",path,frontname,count,extention);
+					snprintf(newname, _FS_PATH_MAX,"%s/%s_%d.%s",unpack_metadata->dir,frontname,count,extention);
 					break;
 				case _MIME_RENAME_METHOD_POSTFIX:
-					snprintf(newname, _FS_PATH_MAX,"%s/%s_%d",path,fname,count);
+					snprintf(newname, _FS_PATH_MAX,"%s/%s_%d",unpack_metadata->dir,fname,count);
 					break;
 				case _MIME_RENAME_METHOD_RANDPREFIX:
-					snprintf(newname, _FS_PATH_MAX,"%s/%d_%d_%s",path,count,randval,fname);
+					snprintf(newname, _FS_PATH_MAX,"%s/%d_%d_%s",unpack_metadata->dir,count,randval,fname);
 					break;
 				case _MIME_RENAME_METHOD_RANDINFIX:
-					snprintf(newname, _FS_PATH_MAX,"%s/%s_%d_%d.%s",path,frontname,count,randval,extention);
+					snprintf(newname, _FS_PATH_MAX,"%s/%s_%d_%d.%s",unpack_metadata->dir,frontname,count,randval,extention);
 					break;
 				case _MIME_RENAME_METHOD_RANDPOSTFIX:
-					snprintf(newname, _FS_PATH_MAX,"%s/%s_%d_%d",path,fname,count,randval);
+					snprintf(newname, _FS_PATH_MAX,"%s/%s_%d_%d",unpack_metadata->dir,fname,count,randval);
 			}
 			count++;
 		}
@@ -292,16 +290,16 @@ static void copyFILEcontent(FILE* src, FILE* dst)
 	}
 }
 
-void write_FS_file(MIME_element* cur, int rename_method)
+void write_FS_file(RIPMIME_output *unpack_metadata, MIME_element* cur)
 {
 	char * wr_filename = NULL;
 	FILE* wf = NULL;
 	int fn_l = 0;
 
-	MIME_test_uniquename(cur->directory, cur->filename, rename_method);
-	fn_l = strlen(cur->directory) + strlen(cur->filename) + sizeof(char) * 2;
+	MIME_test_uniquename(unpack_metadata, cur->filename);
+	fn_l = strlen(unpack_metadata->dir) + strlen(cur->filename) + sizeof(char) * 2;
 	wr_filename = malloc(fn_l);
-	snprintf(wr_filename,fn_l,"%s/%s",cur->directory,cur->filename);
+	snprintf(wr_filename,fn_l,"%s/%s",unpack_metadata->dir,cur->filename);
 	if (cur->f == NULL) {
 		LOGGER_log("%s:%d:%s:ERROR: Cannot copy data from mime_element memory file, programming error (for %s)", FL,__func__, wr_filename, strerror(errno));
 		free(wr_filename);
@@ -328,7 +326,7 @@ void write_all_to_FS_files(RIPMIME_output *unpack_metadata)
 	for (i = 0; i < all_MIME_elements.mime_count; i++)
 	{
 		MIME_element*  m = getItem(all_MIME_elements.mime_arr, i);
-		write_FS_file(m, unpack_metadata->rename_method);
+		write_FS_file(unpack_metadata, m);
 	}
 }
 
