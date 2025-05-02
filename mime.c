@@ -63,8 +63,8 @@ int MIME_unpack_stage2( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, st
 int MIME_unpack_single_diskfile( RIPMIME_output *unpack_metadata, char *mpname, int current_recursion_level, struct SS_object *ss );
 int MIME_unpack_single_file( RIPMIME_output *unpack_metadata, FILE *fi, int current_recursion_level, struct SS_object *ss );
 int MIME_unpack_mailbox( RIPMIME_output *unpack_metadata, char *mpname, int current_recursion_level, struct SS_object *ss );
-int MIME_handle_multipart( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss );
-int MIME_handle_rfc822( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss );
+int MIME_handle_multipart( MIME_element* parent_mime, FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss );
+int MIME_handle_rfc822( MIME_element* parent_mime, FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss );
 
 MIME_element* MIME_decode_std_raw(  MIME_element* parent, FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo);
 MIME_element* MIME_decode_std_text( MIME_element* parent, FFGET_FILE *f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo );
@@ -2459,9 +2459,8 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIME_handle_multipart( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss )
+int MIME_handle_multipart( MIME_element* parent_mime, FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss )
 {
-    MIME_element* parent_mime = NULL;
     MIME_element* decoded_mime = NULL;
 
     int result = 0;
@@ -2514,11 +2513,11 @@ int MIME_handle_multipart( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata,
   Function Name : MIME_handle_rfc822
   Returns Type  : int
   ----Parameter List
-  1. FFGET_FILE *input_f,                         Input stream
-  2.  RIPMIME_output *unpack_metadata,                      Directory to write files to
+  1.  FFGET_FILE *input_f,             Input stream
+  2.  RIPMIME_output *unpack_metadata, Directory to write files to
   3.  struct MIMEH_header_info *hinfo, Header information structure
-  4.  int current_recursion_level,      Current recursion level
-  5.  struct SS_object *ss ,                String stack containing already decoded file names
+  4.  int current_recursion_level,     Current recursion level
+  5.  struct SS_object *ss ,           String stack containing already decoded file names
   ------------------
   Exit Codes    :
   Side Effects  :
@@ -2529,9 +2528,8 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIME_handle_rfc822( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss )
+int MIME_handle_rfc822( MIME_element* parent_mime, FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss )
 {
-    MIME_element* parent_mime = NULL;
     MIME_element* decoded_mime = NULL;
 
     /** Decode a RFC822 encoded stream of data from *input_f  **/
@@ -2606,9 +2604,8 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIME_handle_plain( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss )
+int MIME_handle_plain( MIME_element* parent_mime, FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss )
 {
-    MIME_element* parent_mime = NULL;
     MIME_element* decoded_mime = NULL;
 
     /** Handle a plain text encoded data stream from *input_f **/
@@ -2729,14 +2726,14 @@ int MIME_unpack_stage2( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, st
         {
             // Pass off to the RFC822 handler
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding with RFC822 decoder\n",FL,__func__);
-            result = MIME_handle_rfc822(input_f,unpack_metadata,h,current_recursion_level,ss);
+            result = MIME_handle_rfc822( parent_mime, input_f,unpack_metadata,h,current_recursion_level,ss);
         } else if (MIMEH_is_contenttype(_CTYPE_MULTIPART, h->content_type)) {
             // Pass off to the multipart handler
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding with Multipart decoder\n",FL,__func__);
-            result = MIME_handle_multipart(input_f,unpack_metadata,h,current_recursion_level,ss);
+            result = MIME_handle_multipart( parent_mime, input_f,unpack_metadata,h,current_recursion_level,ss);
         } else {
             if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Decoding boundaryless file (%s)...\n",FL,__func__,h->filename);
-            result = MIME_handle_plain( input_f, unpack_metadata,h,current_recursion_level,ss);
+            result = MIME_handle_plain( parent_mime, input_f, unpack_metadata,h,current_recursion_level,ss);
         } // else-if content was RFC822 or multi-part
         return result;
     } // End of the boundary-LESS mode ( processing the mail which has no boundaries in the primary headers )
@@ -2816,7 +2813,7 @@ int MIME_unpack_stage2( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, st
                                 // however, it is a rather robust/reliable way.
                                 if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Chose Content-type == RFC822 clause",FL,__func__);
                                 if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Calling MIME_process_content_transfer_encoding()",FL,__func__);
-                                result = MIME_handle_rfc822(input_f,unpack_metadata,h,current_recursion_level,ss);
+                                result = MIME_handle_rfc822(parent_mime, input_f,unpack_metadata,h,current_recursion_level,ss);
                                 // First up - extract the RFC822 body out of the parent mailpack
                                 // XX result = MIME_process_content_transfer_encoding( input_f, unpackdir, h, ss );
 
