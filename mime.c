@@ -141,7 +141,6 @@ struct MIME_globals {
     int syslogging;
     int stderrlogging;
     int unique_names;
-    int rename_method;
     char headersname[_MIME_STRLEN_MAX];
     char tempdirectory[_MIME_STRLEN_MAX];
     int save_headers;
@@ -843,28 +842,6 @@ int MIME_set_mailboxformat( int level )
 {
     glb.mailbox_format = level;
     MIMEH_set_mailbox( level );
-    return 0;
-}
-
-/*------------------------------------------------------------------------
-Procedure:     MIME_set_renamemethod ID:1
-Purpose:
-Input:
-Output:
-Errors:
-------------------------------------------------------------------------*/
-int MIME_set_renamemethod( int method )
-{
-    if (( method >= _MIME_RENAME_METHOD_INFIX ) && ( method <= _MIME_RENAME_METHOD_RANDPOSTFIX ))
-    {
-        glb.rename_method = method;
-    }
-    else
-    {
-        LOGGER_log("%s:%d:%s:ERROR: selected method not within %d > x > %d range", FL,__func__, _MIME_RENAME_METHOD_INFIX, _MIME_RENAME_METHOD_POSTFIX );
-        return -1;
-    }
-
     return 0;
 }
 
@@ -1973,7 +1950,6 @@ void MIME_init( void )
     glb.no_nameless = 0;
     glb.mailbox_format = 0;
     glb.name_by_type = 0;
-    glb.rename_method = _MIME_RENAME_METHOD_INFIX;
 
     glb.header_longsearch = 0;
     glb.max_recursion_level = _RECURSION_LEVEL_DEFAULT;
@@ -2176,7 +2152,7 @@ MIME_element* MIME_process_content_transfer_encoding( MIME_element* parent_mime,
     //      its tests here
     if ((glb.unique_names)&&(keep))
     {
-        MIME_test_uniquename( unpack_metadata->dir, hinfo->filename, glb.rename_method );
+        MIME_test_uniquename( unpack_metadata->dir, hinfo->filename, unpack_metadata->rename_method );
     }
     // If the calling program requested verbosity, then indicate that we're decoding
     //      the file here
@@ -3276,11 +3252,11 @@ int MIME_unpack( RIPMIME_output *unpack_metadata, char *mpname, int current_recu
  * Closes the files used in MIME_unpack, such as headers etc
  * Writes memory FILE object content to disk if there is in-memory mode
  */
-void MIME_close(RIPMIME_output *unpack_metadata, int rename_method)
+void MIME_close(RIPMIME_output *unpack_metadata)
 {
 
     if (unpack_metadata->unpack_mode == RIPMIME_UNPACK_MODE_IN_MEMORY)
-        write_all_to_FS_files(unpack_metadata, rename_method);
+        write_all_to_FS_files(unpack_metadata);
 
     if (MIME_DNORMAL) {
         LOGGER_log("%s:%d:%s: start.",FL,__func__);

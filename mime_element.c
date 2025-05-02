@@ -64,7 +64,7 @@ MIME_element* MIME_element_add(struct MIME_element* parent, RIPMIME_output *unpa
 	MIME_element *cur = malloc(sizeof(MIME_element));
 	int fullpath_len = 0;
 
-	// LOGGER_log("%s:%d:%s:start\n",FL,__func__);
+	if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:start\n",FL,__func__);
 
 	fullpath_len = strlen(unpack_metadata->dir) + strlen(filename) + 3 * sizeof(char);
 	insertItem(all_MIME_elements.mime_arr, cur);
@@ -93,6 +93,35 @@ MIME_element* MIME_element_add(struct MIME_element* parent, RIPMIME_output *unpa
 
 	if (unpack_metadata != NULL && unpack_metadata->unpack_mode == RIPMIME_UNPACK_MODE_LIST_MIME && cur->f != NULL) {
 		fprintf (stdout, "%d|%d|%d|%d|%s|%s\n", all_MIME_elements.mime_count, attachment_count, filecount, current_recursion_level, cur->content_type_string, cur->filename);
+	}
+	return cur;
+}
+
+MIME_element* MIME_element_add_root(RIPMIME_output *unpack_metadata,
+							   char* filename)
+{
+	MIME_element *cur = malloc(sizeof(MIME_element));
+	int fullpath_len = 0;
+
+	if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:start\n",FL,__func__);
+
+	fullpath_len = strlen(unpack_metadata->dir) + strlen(filename) + 3 * sizeof(char);
+	insertItem(all_MIME_elements.mime_arr, cur);
+	cur->parent = NULL;
+	cur->decode_result_code = 0;
+	cur->id = 0;
+	cur->directory = unpack_metadata->dir;
+	cur->filename = dup_ini(filename);
+	cur->content_type_string = NULL;
+	cur->content_transfer_encoding = NULL;
+	cur->name = NULL;
+
+	cur->fullpath = (char*)malloc(fullpath_len);
+	snprintf(cur->fullpath,fullpath_len,"%s/%s",unpack_metadata->dir,filename);
+	cur->f = fopen(cur->fullpath,"r");
+	if (cur->f == NULL) {
+		LOGGER_log("%s:%d:%s:ERROR: cannot open %s for reading",FL,"main",cur->fullpath);
+		return cur;
 	}
 	return cur;
 }
@@ -293,13 +322,13 @@ void write_FS_file(MIME_element* cur, int rename_method)
 	fclose(wf);
 }
 
-void write_all_to_FS_files(RIPMIME_output *unpack_metadata, int rename_method)
+void write_all_to_FS_files(RIPMIME_output *unpack_metadata)
 {
 	int i;
 	for (i = 0; i < all_MIME_elements.mime_count; i++)
 	{
 		MIME_element*  m = getItem(all_MIME_elements.mime_arr, i);
-		write_FS_file(m, rename_method);
+		write_FS_file(m, unpack_metadata->rename_method);
 	}
 }
 

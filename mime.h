@@ -97,12 +97,11 @@ int MIME_get_header_defect_count( void );
 int MIME_is_file_mime( char *fname );
 int MIME_is_file_uuenc( char *fname );
 
-
 char *MIME_get_blankfileprefix( void );
 char *MIME_get_headersname( void );
 char *MIME_get_subject( void );
 void MIME_init( void );
-void MIME_close( RIPMIME_output *unpack_metadata, int rename_method );
+void MIME_close( RIPMIME_output *unpack_metadata );
 int MIME_set_tmpdir( char *tmpdir );
 
 #endif

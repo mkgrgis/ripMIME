@@ -20,6 +20,7 @@ struct mime_output
 	char *dir;
 	int unpack_mode;
 	// int fragment_number; will be used later
+	int rename_method;
 };
 typedef struct mime_output RIPMIME_output;
 
@@ -69,7 +70,7 @@ MIME_element* MIME_element_add (
 void MIME_element_deactivate (MIME_element* cur, RIPMIME_output *unpack_metadata);
 void printArray(dynamic_array* container);
 void freeArray(dynamic_array* container, RIPMIME_output *unpack_metadata);
-void write_all_to_FS_files(RIPMIME_output *unpack_metadata, int rename_method);
+void write_all_to_FS_files(RIPMIME_output *unpack_metadata);
 
 int MIME_test_uniquename( char *path, char *fname, int method );
 
