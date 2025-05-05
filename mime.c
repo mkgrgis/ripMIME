@@ -142,7 +142,7 @@ struct MIME_globals {
     int stderrlogging;
     char headersname[_MIME_STRLEN_MAX];
     char tempdirectory[_MIME_STRLEN_MAX];
-    int save_headers;
+    int dump_headers;
     int attachment_count;
     int current_line;
     int no_nameless;
@@ -641,7 +641,7 @@ int MIME_set_filename_report_fn( int (*ptr_to_fn)(char *, char *) )
 int MIME_set_dumpheaders( int level )
 {
 
-    glb.save_headers = level;
+    glb.dump_headers = level;
 
     return 0;
 }
@@ -1931,7 +1931,7 @@ void MIME_init( void )
     glb.quiet = 0;
     glb.syslogging = 0;
     glb.stderrlogging = 1;
-    glb.save_headers = 0;
+    glb.dump_headers = 0;
     glb.no_nameless = 0;
     glb.mailbox_format = 0;
     glb.name_by_type = 0;
@@ -3095,8 +3095,8 @@ int MIME_unpack_single_file( RIPMIME_output *unpack_metadata, FILE *fi, int curr
         h.current_recursion_level = current_recursion_level;
     glb.current_line = 0;
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: recursion level checked...%d\n",FL,__func__, current_recursion_level);
-    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: DumpHeaders = %d\n",FL,__func__, glb.save_headers);
-    if ((!hf)&&(glb.save_headers))
+    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: DumpHeaders = %d\n",FL,__func__, glb.dump_headers);
+    if ((!hf)&&(glb.dump_headers))
     {
         char * fn;
         int fn_l = strlen(unpack_metadata->dir) + strlen(glb.headersname) + sizeof(char) * 2;
@@ -3108,7 +3108,7 @@ int MIME_unpack_single_file( RIPMIME_output *unpack_metadata, FILE *fi, int curr
         hf = fopen(fn,"w");
         if (!hf)
         {
-            glb.save_headers = 0;
+            glb.dump_headers = 0;
             LOGGER_log("%s:%d:%s:ERROR: Cannot open '%s' for writing  (%s)", FL,__func__, fn, strerror(errno));
         }
         else

@@ -65,20 +65,22 @@
 #define _MIMEH_FOUND_FROM				100
 
 #ifndef PATH_MAX
-#define PATH_MAX 4096
+#define PATH_MAX 4096 * sizeof(char)
 #endif
 
-#define _MIMEH_STRLEN_MAX 10230
+#define _MIMEH_STRLEN_MAX 10230 * sizeof(char)
 #define _MIMEH_FILENAMELEN_MAX PATH_MAX
-#define _MIMEH_CONTENT_TYPE_MAX 1280
-#define _MIMEH_SUBJECTLEN_MAX 1280
-#define _MIMEH_CONTENT_DESCRIPTION_MAX 1280
-#define _MIMEH_CONTENT_TRANSFER_ENCODING_MAX 2560
-#define _MIMEH_CONTENT_DISPOSITION_MAX 2560
+#define _MIMEH_CONTENT_TYPE_MAX 1280 * sizeof(char)
+#define _MIMEH_SUBJECTLEN_MAX 1280 * sizeof(char)
+#define _MIMEH_CONTENT_DESCRIPTION_MAX 1280 * sizeof(char)
+#define _MIMEH_CONTENT_TRANSFER_ENCODING_MAX 2560 * sizeof(char)
+#define _MIMEH_CONTENT_DISPOSITION_MAX 2560 * sizeof(char)
+#define _MIMEH_CHARSET_MAX 128 * sizeof(char)
+
 #define _MIMEH_DEBUG_NORMAL 1
 #define _MIMEH_DEBUG_PEDANTIC 10
 #define _MIMEH_DEFECT_ARRAY_SIZE 100
-#define _MIMEH_CHARSET_MAX 128
+
 
 // Errors to throw back
 #define MIMEH_ERROR_DISK_FULL 128
@@ -100,20 +102,20 @@ struct MIMEH_header_info
 	FILE *header_file;
 	FILE *original_header_file;
 	int content_type;
-	char content_type_string[ _MIMEH_CONTENT_TYPE_MAX + 1 ];
-	char content_description_string[ _MIMEH_CONTENT_DESCRIPTION_MAX + 1 ];
-	char boundary[_MIMEH_STRLEN_MAX + 1];
+	char content_type_string[ _MIMEH_CONTENT_TYPE_MAX + 1 * sizeof(char) ];
+	char content_description_string[ _MIMEH_CONTENT_DESCRIPTION_MAX + 1 * sizeof(char) ];
+	char boundary[_MIMEH_STRLEN_MAX + 1 * sizeof(char)];
 	int boundary_located;
-	char subject[_MIMEH_SUBJECTLEN_MAX + 1];
-	char filename[_MIMEH_FILENAMELEN_MAX + 1];
-	char name[_MIMEH_STRLEN_MAX + 1];
+	char subject[_MIMEH_SUBJECTLEN_MAX + 1 * sizeof(char)];
+	char filename[_MIMEH_FILENAMELEN_MAX + 1 * sizeof(char)];
+	char name[_MIMEH_STRLEN_MAX + 1 * sizeof(char)];
 
 /** 20041217-1601:PLD: New header fields to keep **/
-	char from[_MIMEH_STRLEN_MAX + 1];
-	char date[_MIMEH_STRLEN_MAX + 1];
-	char to[_MIMEH_STRLEN_MAX + 1];
-	char messageid[_MIMEH_STRLEN_MAX + 1];
-	char received[_MIMEH_STRLEN_MAX + 1];
+	char from[_MIMEH_STRLEN_MAX + 1 * sizeof(char)];
+	char date[_MIMEH_STRLEN_MAX + 1 * sizeof(char)];
+	char to[_MIMEH_STRLEN_MAX + 1 * sizeof(char)];
+	char messageid[_MIMEH_STRLEN_MAX + 1 * sizeof(char)];
+	char received[_MIMEH_STRLEN_MAX + 1 * sizeof(char)];
 	/** end of new fields **/
 
 	// Store multiple filenames
@@ -122,14 +124,14 @@ struct MIMEH_header_info
 	struct SS_object ss_names;
 
 	int content_transfer_encoding;
-	char content_transfer_encoding_string[ _MIMEH_CONTENT_TRANSFER_ENCODING_MAX + 1 ];
+	char content_transfer_encoding_string[ _MIMEH_CONTENT_TRANSFER_ENCODING_MAX + 1 * sizeof(char) ];
 	int content_disposition;
-	char content_disposition_string[ _MIMEH_CONTENT_DISPOSITION_MAX + 1 ];
+	char content_disposition_string[ _MIMEH_CONTENT_DISPOSITION_MAX + 1 * sizeof(char) ];
 	//int charset;
-	char charset[ _MIMEH_CHARSET_MAX + 1 ];
+	char charset[ _MIMEH_CHARSET_MAX + 1 * sizeof(char) ];
 	int format;
 	int file_has_uuencode;
-	char uudec_name[_MIMEH_FILENAMELEN_MAX + 1];	// UUDecode name. This is a post-decode information field.
+	char uudec_name[_MIMEH_FILENAMELEN_MAX + 1 * sizeof(char)];	// UUDecode name. This is a post-decode information field.
 	int current_recursion_level;
 
 	// Malformed email reporting

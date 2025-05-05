@@ -27,7 +27,7 @@
 struct _FFGET_FILE
 {
 	FILE *f;
-	char buffer[FFGET_BUFFER_MAX+4];
+	char buffer[FFGET_BUFFER_MAX + 4 * sizeof(char)];
 	char *startpoint;
 	char *endpoint;
 	char *buffer_end;
