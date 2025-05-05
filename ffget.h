@@ -27,7 +27,7 @@
 struct _FFGET_FILE
 {
 	FILE *f;
-	char buffer[FFGET_BUFFER_MAX+4];
+	char buffer[FFGET_BUFFER_MAX + 4];
 	char *startpoint;
 	char *endpoint;
 	char *buffer_end;
@@ -42,8 +42,6 @@ struct _FFGET_FILE
 	char lastchar;
 	int linebreak;
 	char lastbreak[10];
-
-
 };
 
 typedef struct _FFGET_FILE FFGET_FILE;
@@ -54,7 +52,6 @@ extern int FFGET_SDL_MODE;  // Single Char Delimeter
 extern char SDL_MODE_DELIMITS[];
 extern char NORM_MODE_DELIMITS[];
 extern char *DELIMITERS;
-
 
 
 int FFGET_setstream( FFGET_FILE *f, FILE *fi );

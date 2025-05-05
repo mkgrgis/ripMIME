@@ -64,7 +64,7 @@ MIME_element* MIME_element_add(struct MIME_element* parent, RIPMIME_output *unpa
 	MIME_element *cur = malloc(sizeof(MIME_element));
 	int fullpath_len = 0;
 
-	if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:start\n",FL,__func__);
+	if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:start\n  file=%s, dir=%s",FL,__func__, filename, unpack_metadata->dir);
 
 	fullpath_len = strlen(unpack_metadata->dir) + strlen(filename) + 3 * sizeof(char);
 	insertItem(all_MIME_elements.mime_arr, cur);
@@ -97,28 +97,32 @@ MIME_element* MIME_element_add(struct MIME_element* parent, RIPMIME_output *unpa
 	return cur;
 }
 
-MIME_element* MIME_element_add_root(RIPMIME_output *unpack_metadata,
-							   char* filename)
+MIME_element* MIME_element_add_root(RIPMIME_output *unpack_metadata, char* filename)
 {
 	MIME_element *cur = malloc(sizeof(MIME_element));
-	int fullpath_len = 0;
 
 	if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:start\n",FL,__func__);
 
-	fullpath_len = strlen(unpack_metadata->dir) + strlen(filename) + 3 * sizeof(char);
 	insertItem(all_MIME_elements.mime_arr, cur);
 	cur->parent = NULL;
 	cur->decode_result_code = 0;
 	cur->id = 0;
 	cur->directory = unpack_metadata->dir;
-	cur->filename = dup_ini(filename);
+	cur->filename = dup_ini(strdup(filename));
 	cur->content_type_string = NULL;
 	cur->content_transfer_encoding = NULL;
 	cur->name = NULL;
 
-	cur->fullpath = (char*)malloc(fullpath_len);
-	snprintf(cur->fullpath,fullpath_len,"%s/%s",unpack_metadata->dir,filename);
-	cur->f = fopen(cur->fullpath,"r");
+	if (((strlen(filename) == 1 )&&(filename[0] == '-')) || filename == NULL)
+	{
+		cur->f = stdin;
+		cur->fullpath = NULL;
+	}
+	else
+	{
+		cur->fullpath = strdup(cur->filename); /* to prevent free() error */
+		cur->f = fopen(cur->fullpath,"rb");
+	}
 	if (cur->f == NULL) {
 		LOGGER_log("%s:%d:%s:ERROR: cannot open %s for reading",FL,"main",cur->fullpath);
 		return cur;
@@ -154,10 +158,16 @@ void MIME_element_free (MIME_element* cur)
 	cur = NULL;
 }
 
+/*
+ * File descriptor closing in case of disk operations or seek to 0 in case of in-memory
+ */
 void MIME_element_deactivate(MIME_element* cur, RIPMIME_output *unpack_metadata)
 {
+	if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: deactivate %s\n",FL,__func__,cur->filename);
 	if (unpack_metadata->unpack_mode == RIPMIME_UNPACK_MODE_TO_DIRECTORY)
 		MIME_element_free(cur);
+	else
+		fseek(cur->f, 0, SEEK_SET);
 }
 
 static inline int get_random_value(void) {
@@ -405,10 +415,13 @@ void deleteItem(dynamic_array* container, int index)
 // Array Traversal
 void printArray(dynamic_array* container)
 {
+/*
 	printf("Array elements: ");
 	for (int i = 0; i < container->size; i++) {
 		printf("%p ", container->array[i]);
 	}
+*/
+	printf("\nUnpacked MIME elements array: ");
 	printf("\nSize: ");
 	printf("%lu", container->size);
 	printf("\nCapacity: ");

@@ -56,6 +56,7 @@ extern all_MIME_elements_s all_MIME_elements;
 int MIMEELEMENT_set_debug( int level );
 
 void all_MIME_elements_init (void);
+MIME_element* MIME_element_add_root(RIPMIME_output *unpack_metadata, char* filename);
 MIME_element* MIME_element_add (
 	struct MIME_element* parent,
 	RIPMIME_output *unpack_metadata,
@@ -67,7 +68,7 @@ MIME_element* MIME_element_add (
 	int attachment_count,
 	int filecount,
 	const char* func);
-// void MIME_element_free (MIME_element* cur);
+void MIME_element_free (MIME_element* cur);
 void MIME_element_deactivate (MIME_element* cur, RIPMIME_output *unpack_metadata);
 void printArray(dynamic_array* container);
 void freeArray(dynamic_array* container, RIPMIME_output *unpack_metadata);

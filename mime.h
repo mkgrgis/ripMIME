@@ -3,7 +3,7 @@
 #define LIBMIME
 /* MIME.h */
 
-#define LIBMIME_VERSION "200811050000"
+#define LIBMIME_VERSION "202505300000"
 
 /* Exit Error codes */
 #define _EXITERR_UNDEFINED_BOUNDARY						100
@@ -51,7 +51,7 @@
 int MIME_version( void );
 size_t MIME_read_raw( char *src_mpname, char *dest_mpname, size_t rw_buffer_size );
 int MIME_read( char *mpname ); /* returns filesize in KB */
-int MIME_unpack( RIPMIME_output *unpack_metadata, char *mpname, int current_recusion_level );
+int MIME_unpack( MIME_element* root, RIPMIME_output *unpack_metadata, int current_recusion_level );
 int MIME_insert_Xheader( char *fname, char *xheader );
 int MIME_set_blankfileprefix( char *prefix );
 int MIME_set_recursion_level(int level);

@@ -36,7 +36,7 @@
 
 struct RIPMIME_globals
 {
-   char *inputfile;
+   char *inputpath;
    RIPMIME_output *output;
    int use_return_codes;
    int timeout;
@@ -183,14 +183,14 @@ int RIPMIME_parse_parameters (struct RIPMIME_globals *glb, int argc, char **argv
                case 'i':
                    if (argv[i][2] != '\0')
                    {
-                       glb->inputfile = &argv[i][2];
+                       glb->inputpath = &argv[i][2];
                    }
                    else
                    {
                        i++;
                        if (i < argc)
                        {
-                           glb->inputfile = argv[i];
+                           glb->inputpath = argv[i];
                        }
                        else
                        {
@@ -533,7 +533,7 @@ int RIPMIME_init (struct RIPMIME_globals *glb, RIPMIME_output *o)
    glb->output->unpack_mode = RIPMIME_UNPACK_MODE_TO_DIRECTORY;
    glb->output->rename_method = _MIME_RENAME_METHOD_INFIX;
    glb->output->unique_names = 1;
-   glb->inputfile = NULL;
+   glb->inputpath = NULL;
    glb->use_return_codes = 0;
    glb->timeout = 0;
    glb->quiet = 0;
@@ -559,7 +559,7 @@ Changes:
 \------------------------------------------------------------------*/
 void RIPMIME_signal_alarm( int sig )
 {
-   if (ripmime_globals->quiet == 0) LOGGER_log("%s:%d:RIPMIME_signal_alarm: ripMIME took too long to complete. Mailpack is \"%s\", output dir is \"%s\"",FL, ripmime_globals->inputfile, ripmime_globals->output->dir );
+   if (ripmime_globals->quiet == 0) LOGGER_log("%s:%d:RIPMIME_signal_alarm: ripMIME took too long to complete. Mailpack is \"%s\", output dir is \"%s\"",FL, ripmime_globals->inputpath, ripmime_globals->output->dir );
    exit(RIPMIME_ERROR_TIMEOUT);
 }
 
@@ -583,6 +583,7 @@ Changes:
 int RIPMIME_unpack_single( struct RIPMIME_globals *glb, char *fname )
 {
    int result = 0;
+   MIME_element* root = MIME_element_add_root(glb->output, fname);
 
    /** Set the alarm timeout feature. **/
    if (glb->timeout > 0) {
@@ -590,12 +591,10 @@ int RIPMIME_unpack_single( struct RIPMIME_globals *glb, char *fname )
        alarm(glb->timeout);
    }
 
-   result = MIME_unpack (glb->output, fname, 0);
+   result = MIME_unpack (root, glb->output, 0);
 
    // do any last minute things
-
    MIME_close (glb->output);
-
    return result;
 }
 
@@ -623,8 +622,8 @@ int RIPMIME_unpack( struct RIPMIME_globals *glb )
 
    /** If we're not inputting from STDIN, check to see if the
      ** input is a directory **/
-   if (strcmp(glb->inputfile,"-")!=0) {
-       stat_result = stat(glb->inputfile, &st);
+   if (strcmp(glb->inputpath,"-")!=0) {
+       stat_result = stat(glb->inputpath, &st);
        if (stat_result != 0) return -1;
 
        if (S_ISDIR(st.st_mode)) input_is_directory = 1;
@@ -636,7 +635,7 @@ int RIPMIME_unpack( struct RIPMIME_globals *glb )
        struct dirent *dir_entry;
 
        fprintf(stderr,"input file is a directory, recursing\n");
-       dir = opendir(glb->inputfile);
+       dir = opendir(glb->inputpath);
        if (dir == NULL) return -1;
 
        do {
@@ -650,7 +649,7 @@ int RIPMIME_unpack( struct RIPMIME_globals *glb )
            if (strcmp(dir_entry->d_name, ".")==0) continue;
            if (strcmp(dir_entry->d_name, "..")==0) continue;
 
-           snprintf(fullfilename,sizeof(fullfilename),"%s/%s", glb->inputfile, dir_entry->d_name);
+           snprintf(fullfilename,sizeof(fullfilename),"%s/%s", glb->inputpath, dir_entry->d_name);
            stat_result = stat( fullfilename, &st );
            if (stat_result != 0) continue;
            if (S_ISREG(st.st_mode)) {
@@ -664,7 +663,7 @@ int RIPMIME_unpack( struct RIPMIME_globals *glb )
 
    } else {
        /** If the supplied file was actually a normal file, then decode normally **/
-       result = RIPMIME_unpack_single( glb, glb->inputfile );
+       result = RIPMIME_unpack_single( glb, glb->inputpath );
    }
    return result;
 }
@@ -724,9 +723,9 @@ int main (int argc, char **argv)
    RIPMIME_parse_parameters (&glb, argc, argv);
 
    // if our input filename wasn't specified, then we better let the user know!
-   if (!glb.inputfile)
+   if (!glb.inputpath)
    {
-       LOGGER_log("Error: No input file was specified\n");
+       LOGGER_log("Error: No input path or file was specified\n");
        return RIPMIME_ERROR_NO_INPUT_FILE;
    }
 

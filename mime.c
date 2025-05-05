@@ -61,8 +61,8 @@
 
 int MIME_unpack_stage2( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *hinfo, int current_recursion_level, struct SS_object *ss );
 int MIME_unpack_single_diskfile( RIPMIME_output *unpack_metadata, char *mpname, int current_recursion_level, struct SS_object *ss );
-int MIME_unpack_single_file( RIPMIME_output *unpack_metadata, FILE *fi, int current_recursion_level, struct SS_object *ss );
-int MIME_unpack_mailbox( RIPMIME_output *unpack_metadata, char *mpname, int current_recursion_level, struct SS_object *ss );
+int MIME_unpack_single_file( MIME_element* root, RIPMIME_output *unpack_metadata, int current_recursion_level, struct SS_object *ss );
+int MIME_unpack_mailbox( MIME_element* root, RIPMIME_output *unpack_metadata, int current_recursion_level, struct SS_object *ss );
 int MIME_handle_multipart( MIME_element* parent_mime, FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss );
 int MIME_handle_rfc822( MIME_element* parent_mime, FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, struct MIMEH_header_info *h, int current_recursion_level, struct SS_object *ss );
 
@@ -142,7 +142,7 @@ struct MIME_globals {
     int stderrlogging;
     char headersname[_MIME_STRLEN_MAX];
     char tempdirectory[_MIME_STRLEN_MAX];
-    int save_headers;
+    int dump_headers;
     int attachment_count;
     int current_line;
     int no_nameless;
@@ -641,7 +641,7 @@ int MIME_set_filename_report_fn( int (*ptr_to_fn)(char *, char *) )
 int MIME_set_dumpheaders( int level )
 {
 
-    glb.save_headers = level;
+    glb.dump_headers = level;
 
     return 0;
 }
@@ -1931,7 +1931,7 @@ void MIME_init( void )
     glb.quiet = 0;
     glb.syslogging = 0;
     glb.stderrlogging = 1;
-    glb.save_headers = 0;
+    glb.dump_headers = 0;
     glb.no_nameless = 0;
     glb.mailbox_format = 0;
     glb.name_by_type = 0;
@@ -2892,6 +2892,29 @@ int MIME_unpack_stage2( FFGET_FILE *input_f, RIPMIME_output *unpack_metadata, st
     return result;
 }
 
+static inline int close_mailbox_item_step ( MIME_element* mbox_item, RIPMIME_output *unpack_metadata, int current_recursion_level, struct SS_object *ss )
+{
+    int result = 0;
+
+    if (mbox_item == NULL)
+       return -1;
+    // Close the mailpack
+    //    MIME_element_deactivate(mbox_item, unpack_metadata);
+    fseek(mbox_item->f, 0, SEEK_SET);
+    MIME_unpack_single_file(mbox_item, unpack_metadata, current_recursion_level, ss );
+    // Remove the now unpacked mailpack
+    if (0 && unpack_metadata->unpack_mode == RIPMIME_UNPACK_MODE_TO_DIRECTORY)
+    {
+       result = remove(mbox_item->filename);
+       if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: mbox item tmp remove  %s\n",FL,__func__,mbox_item->filename);
+       if (result == -1)
+       {
+          LOGGER_log("%s:%d:%s:ERROR: removing temporary mailpack '%s' (%s)",FL,__func__, mbox_item->filename,strerror(errno));
+       }
+   }
+   return result;
+}
+
 /*------------------------------------------------------------------------
 Procedure:     MIME_decode_mailbox ID:1
 Purpose:       Decodes mailbox formatted email files
@@ -2899,67 +2922,36 @@ Input:
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_unpack_mailbox( RIPMIME_output *unpack_metadata, char *mpname, int current_recursion_level, struct SS_object *ss )
+int MIME_unpack_mailbox( MIME_element* root, RIPMIME_output *unpack_metadata, int current_recursion_level, struct SS_object *ss )
 {
     FFGET_FILE input_f;
-    FILE *fi;
-    FILE *fo;
-    char fname[1024];
     char line[1024];
-    int mcount=0;
-    int lastlinewasblank=1;
-    int result;
-    int input_is_stdin=0;
+    int mcount = 0;
+    int lastlinewasblank = 1;
+    int result = 0;
+    MIME_element* mbox_item = NULL;
 
-    snprintf(fname,sizeof(fname),"%s/tmp.email000.mailpack",unpack_metadata->dir);
-    if ((mpname[0] == '-')&&(mpname[1] == '\0'))
-    {
-        fi = stdin;
-        input_is_stdin=1;
-    } else {
-        fi = (strcmp(mpname,"-")==0) ? stdin : fopen(mpname,"r");
-        if (!fi)
-        {
-            LOGGER_log("%s:%d:%s:ERROR: Cannot open '%s' for reading (%s)",FL,__func__, mpname,strerror(errno));
-            return -1;
-        }
-    }
-
-    fo = fopen(fname,"w");
-    if (!fo)
-    {
-        LOGGER_log("%s:%d:%s:ERROR: Cannot open '%s' for writing  (%s)",FL,__func__, fname,strerror(errno));
-        return -1;
-    }
-
-    FFGET_setstream(&input_f, fi);
+    FFGET_setstream(&input_f, root->f);
     while (FFGET_fgets(line,sizeof(line),&input_f))
     {
+        // LOGGER_log("%s:%d:%s:DEBUG: l '%s'",FL,__func__, line);
         // If we have the construct of "\n\rFrom ", then we
         //      can be -pretty- sure that a new email is about
         //      to start
 
-        if ((lastlinewasblank==1)&&(strncasecmp(line,"From ",5)==0))
+        if ((lastlinewasblank==1) && (strncasecmp(line,"From ",5) == 0))
         {
-            // Close the mailpack
-            fclose(fo);
-            // Now, decode the mailpack
-            //MIME_unpack_single_diskfile(unpackdir, fname, current_recursion_level, ss);
-            // 20040317-2358:PLD
-            MIME_unpack_single_diskfile(unpack_metadata, fname, current_recursion_level ,ss );
-            // Remove the now unpacked mailpack
-            result = remove(fname);
-            if (result == -1)
-            {
-                LOGGER_log("%s:%d:%s:ERROR: removing temporary mailpack '%s' (%s)",FL,__func__, fname,strerror(errno));
-            }
+            char fname[64];
+            result = close_mailbox_item_step(mbox_item, unpack_metadata,current_recursion_level, ss);
             // Create a new mailpack filename, and keep on going...
-            snprintf(fname,sizeof(fname),"%s/tmp.email%03d.mailpack",unpack_metadata->dir,++mcount);
-            fo = fopen(fname,"w");
+            snprintf(fname,sizeof(fname),"tmp.email%03d.mailpack",++mcount);
+            if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: mbox item %s\n",FL,__func__,fname);
+            mbox_item = MIME_element_add(root, unpack_metadata, strdup(fname), NULL, NULL, NULL, current_recursion_level + 1, 0, mcount, __func__);
+            fprintf(mbox_item->f,"%s",line);
         }
         else
         {
-            fprintf(fo,"%s",line);
+            fprintf(mbox_item->f,"%s",line);
         }
 
         // If the line is blank, then note this down because
@@ -2973,31 +2965,23 @@ int MIME_unpack_mailbox( RIPMIME_output *unpack_metadata, char *mpname, int curr
         else lastlinewasblank=0;
     } // While fgets()
 
-    // Don't attempt to close STDIN if that's where the mailpack/mailbox
-    //      has come from.  Although this should really cause problems,
-    //      it's better to be safe than sorry.
-
-    if (input_is_stdin == 0)
-    {
-        fclose(fi);
-    }
-
     // Now, even though we have run out of lines from our main input file
     //  it DOESNT mean we dont have some more decoding to do, in fact
     //      quite the opposite, we still have one more file to decode
     // Close the mailpack
-    fclose(fo);
+    result = close_mailbox_item_step(mbox_item, unpack_metadata, current_recursion_level, ss);
 
-    // Now, decode the mailpack
-    //MIME_unpack_single_diskfile(unpackdir, fname, current_recursion_level, ss);
-    // 20040317-2358:PLD
-    MIME_unpack_single_diskfile(unpack_metadata, fname, current_recursion_level , ss );
-    // Remove the now unpacked mailpack
-    result = remove(fname);
-    if (result == -1)
+    // Don't attempt to close STDIN if that's where the mailpack/mailbox
+    //      has come from.  Although this should really cause problems,
+    //      it's better to be safe than sorry.
+
+    if (root->f != stdin)
     {
-        LOGGER_log("%s:%d:%s:ERROR: removing temporary mailpack '%s' (%s)",FL,__func__, fname,strerror(errno));
+        if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: free root %s",FL,__func__,root->filename);
+        fclose(root->f);
+        root->f == NULL;
     }
+
     return 0;
 }
 
@@ -3020,8 +3004,8 @@ Changes:
 \------------------------------------------------------------------*/
 int MIME_unpack_single_diskfile( RIPMIME_output *unpack_metadata, char *mpname, int current_recursion_level, struct SS_object *ss )
 {
-    FILE *fi;           /* Pointer for the MIME file we're going to be going through */
     int result = 0;
+    MIME_element * unp = MIME_element_add(NULL, unpack_metadata, mpname, NULL, NULL, NULL, current_recursion_level , 0, 1, __func__);
 
     if (current_recursion_level > glb.max_recursion_level)
     {
@@ -3030,34 +3014,11 @@ int MIME_unpack_single_diskfile( RIPMIME_output *unpack_metadata, char *mpname, 
     }
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: dir=%s packname=%s level=%d (max = %d)\n",FL,__func__, unpack_metadata->dir, mpname, current_recursion_level, glb.max_recursion_level);
-    /* if we're reading in from STDIN */
-    if( mpname[0] == '-' && mpname[1] == '\0' )
-    {
-        if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: STDIN opened...\n",FL,__func__);
-        fi = stdin;
-    }
-    else
-    {
-        fi = fopen(mpname,"r");
-        if (!fi)
-        {
-            LOGGER_log("%s:%d:%s:ERROR: Cannot open file '%s' for reading.\n",FL,__func__, mpname);
-            return -1;
-        }
-        if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Input file (%s) opened...\n",FL,__func__, mpname);
-    }
-    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Checking input streams...\n",FL,__func__);
-    /* check to see if we had problems opening the file */
-    if (fi == NULL)
-    {
-        LOGGER_log("%s:%d:%s:ERROR: Could not open mailpack file '%s' (%s)",FL,__func__, mpname, strerror(errno));
-        return -1;
-    }
-    // 20040317-2359:PLD
-    result = MIME_unpack_single_file(unpack_metadata,fi,current_recursion_level , ss);
+
+    result = MIME_unpack_single_file(unp, unpack_metadata,current_recursion_level , ss);
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: result = %d, recursion = %d, filename = '%s'", FL,__func__, result, current_recursion_level, mpname );
     if ((current_recursion_level > 1)&&(result == 241)) result = 0;
-    fclose(fi);
+    MIME_element_deactivate(unp, unpack_metadata);
     return result;
 }
 
@@ -3071,7 +3032,7 @@ int current_recusion_level: Level of recursion we're currently at.
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_unpack_single_file( RIPMIME_output *unpack_metadata, FILE *fi, int current_recursion_level, struct SS_object *ss )
+int MIME_unpack_single_file( MIME_element* root, RIPMIME_output *unpack_metadata, int current_recursion_level, struct SS_object *ss )
 {
     struct MIMEH_header_info h;
     int result = 0;
@@ -3083,11 +3044,10 @@ int MIME_unpack_single_file( RIPMIME_output *unpack_metadata, FILE *fi, int curr
     // Because this MIME module gets used in both CLI and daemon modes
     //  we should check to see that we can report to stderr
     //
-    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: dir=%s level=%d (max = %d)\n",FL,__func__, unpack_metadata->dir, current_recursion_level, glb.max_recursion_level);
+    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: dir=%s file=%s level=%d (max = %d)\n",FL,__func__, unpack_metadata->dir, root->fullpath, current_recursion_level, glb.max_recursion_level);
     if (current_recursion_level > glb.max_recursion_level)
     {
         LOGGER_log("%s:%d:%s:WARNING: Current recursion level of %d is greater than permitted %d",FL,__func__, current_recursion_level, glb.max_recursion_level);
-        //      return -1;
         return MIME_ERROR_RECURSION_LIMIT_REACHED; // 20040305-1302:PLD
         //return 0; // 20040208-1723:PLD
     }
@@ -3095,8 +3055,8 @@ int MIME_unpack_single_file( RIPMIME_output *unpack_metadata, FILE *fi, int curr
         h.current_recursion_level = current_recursion_level;
     glb.current_line = 0;
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: recursion level checked...%d\n",FL,__func__, current_recursion_level);
-    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: DumpHeaders = %d\n",FL,__func__, glb.save_headers);
-    if ((!hf)&&(glb.save_headers))
+    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: DumpHeaders = %d\n",FL,__func__, glb.dump_headers);
+    if ((!hf)&&(glb.dump_headers))
     {
         char * fn;
         int fn_l = strlen(unpack_metadata->dir) + strlen(glb.headersname) + sizeof(char) * 2;
@@ -3108,7 +3068,7 @@ int MIME_unpack_single_file( RIPMIME_output *unpack_metadata, FILE *fi, int curr
         hf = fopen(fn,"w");
         if (!hf)
         {
-            glb.save_headers = 0;
+            glb.dump_headers = 0;
             LOGGER_log("%s:%d:%s:ERROR: Cannot open '%s' for writing  (%s)", FL,__func__, fn, strerror(errno));
         }
         else
@@ -3120,7 +3080,7 @@ int MIME_unpack_single_file( RIPMIME_output *unpack_metadata, FILE *fi, int curr
     }
 
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Setting up streams to decode\n",FL,__func__);
-    FFGET_setstream(&f, fi);
+    FFGET_setstream(&f, root->f);
     /** Initialize the header record **/
     h.boundary[0] = '\0';
     h.boundary_located = 0;
@@ -3145,7 +3105,7 @@ int MIME_unpack_single_file( RIPMIME_output *unpack_metadata, FILE *fi, int curr
     // 20040318-0001:PLD
     result = MIME_unpack_stage2(&f, unpack_metadata, &h, current_recursion_level + 1, ss);
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: done decoding ( in stage2 ) result=%d, to %s\n",FL,__func__, result, unpack_metadata->dir);
-    //  fclose(fi); 20040208-1726:PLD
+    //  fclose(root->f); 20040208-1726:PLD
     if ( headers_save_set_here > 0 )
     {
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Closing header file.\n",FL,__func__);
@@ -3171,24 +3131,24 @@ Input:
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIME_unpack( RIPMIME_output *unpack_metadata, char *mpname, int current_recursion_level )
+int MIME_unpack( MIME_element* root, RIPMIME_output *unpack_metadata, int current_recursion_level )
 {
     int result = 0;
     struct SS_object ss; // Stores the filenames that are created in the unpack operation
 
     if (current_recursion_level > glb.max_recursion_level) return MIME_ERROR_RECURSION_LIMIT_REACHED;
-    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s: Unpacking %s to %s, recursion level is %d",FL,__func__,mpname,unpack_metadata->dir,current_recursion_level);
+    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s: Unpacking %s to %s, recursion level is %d",FL,__func__,root->filename,unpack_metadata->dir,current_recursion_level);
     if (MIME_DNORMAL) SS_set_debug(&ss,1);
     SS_init(&ss);
     if (glb.mailbox_format > 0)
     {
         if (MIME_DNORMAL) LOGGER_log("%s:%d:%s: Unpacking using mailbox format",FL,__func__);
-        result = MIME_unpack_mailbox( unpack_metadata, mpname, (current_recursion_level), &ss );
+        result = MIME_unpack_mailbox( root, unpack_metadata, (current_recursion_level), &ss );
     }
     else
     {
-        if (MIME_DNORMAL) LOGGER_log("%s:%d:%s: Unpacking standard mailpack",FL,__func__,mpname,unpack_metadata->dir,current_recursion_level);
-        result = MIME_unpack_single_diskfile( unpack_metadata, mpname, (current_recursion_level + 1), &ss );
+        if (MIME_DNORMAL) LOGGER_log("%s:%d:%s: Unpacking standard mailpack",FL,__func__,root->filename,unpack_metadata->dir,current_recursion_level);
+        result = MIME_unpack_single_file( root, unpack_metadata, (current_recursion_level + 1), &ss );
     }
 
     if (glb.no_nameless)
@@ -3198,7 +3158,7 @@ int MIME_unpack( RIPMIME_output *unpack_metadata, char *mpname, int current_recu
 
     if (MIME_DNORMAL)
     {
-        LOGGER_log("%s:%d:%s: Files unpacked from '%s' (recursion=%d);",FL,__func__,mpname,current_recursion_level);
+        LOGGER_log("%s:%d:%s: Files unpacked from '%s' (recursion=%d);",FL,__func__,root->filename,current_recursion_level);
         SS_dump(&ss);
     }
 
@@ -3226,7 +3186,7 @@ int MIME_unpack( RIPMIME_output *unpack_metadata, char *mpname, int current_recu
         //LOGGER_log("%s:%d:%s:DEBUG: Clearing boundary stack",FL,__func__);
         BS_clear();
     }
-    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s: Unpacking of %s is done.",FL,__func__,mpname);
+    if (MIME_DNORMAL) LOGGER_log("%s:%d:%s: Unpacking of %s is done.",FL,__func__,root->filename);
     if (MIME_DNORMAL) LOGGER_log("%s:%d:%s: -----------------------------------",FL,__func__);
     return result;
 }
