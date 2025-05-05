@@ -212,7 +212,7 @@ int MIMEH_set_webform( int level );
 int MIMEH_set_outputdir( char *dir );
 
 int MIMEH_set_defect( struct MIMEH_header_info *hinfo, int defect );
-int MIMEH_dump_defects( struct MIMEH_header_info *hinfo );
+void MIMEH_dump_defects( struct MIMEH_header_info *hinfo );
 int MIMEH_get_defect_count( struct MIMEH_header_info *hinfo );
 
 int MIMEH_set_report_MIME( int level );

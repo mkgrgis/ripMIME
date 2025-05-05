@@ -64,11 +64,11 @@ int MIMEH_read_primary_headers( FILE* header_file, FILE* original_header_file, c
 struct MIMEH_globals {
     int doubleCR;
     int doubleCR_save;
-    char doubleCRname[_MIMEH_STRLEN_MAX +1];
+    char doubleCRname[_MIMEH_STRLEN_MAX + 1 * sizeof(char)];
 
-    char appledouble_filename[_MIMEH_STRLEN_MAX +1];
+    char appledouble_filename[_MIMEH_STRLEN_MAX + 1 * sizeof(char)];
 
-    char subject[_MIMEH_STRLEN_MAX +1];
+    char subject[_MIMEH_STRLEN_MAX + 1 * sizeof(char)];
 
     int test_mailbox;
     int debug;
@@ -946,7 +946,7 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
                 tmp_original = realloc(headerline_original, totalsize_original+linesize+1);
                 if (tmp_original == NULL)
                 {
-                    LOGGER_log("%s:%d:%s:ERROR: Cannot allocate %d bytes to contain new headers_original ", FL, __func__, totalsize_original +linesize +1);
+                    LOGGER_log("%s:%d:%s:ERROR: Cannot allocate %d bytes to contain new headers_original ", FL, __func__, totalsize_original +linesize + 1);
                     if (headerline_original != NULL) free(headerline_original);
                     headerline_original = NULL;
                     return -1;
@@ -955,12 +955,12 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
                 if (headerline_original == NULL)
                 {
                     headerline_original = tmp_original;
-                    totalsize_original = linesize +1;
+                    totalsize_original = linesize + 1;
                     PLD_strncpy( headerline_original, linestart, (linesize+1));
                     if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: '%s'", FL, __func__, headerline_original);
                 } else {
                     headerline_original = tmp_original;
-                    PLD_strncpy( (headerline_original +totalsize_original -1), linestart, (linesize +1));
+                    PLD_strncpy( (headerline_original +totalsize_original -1), linestart, (linesize + 1));
                     totalsize_original += linesize;
                     if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: HO =  '%s'", FL, __func__, headerline_original);
                 }
@@ -972,7 +972,7 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
             tmp = realloc(hinfo->headerline_buffer, totalsize+linesize+1);
             if (tmp == NULL)
             {
-                LOGGER_log("%s:%d:%s:ERROR: Cannot allocate %d bytes to contain new headers ", FL, __func__, totalsize +linesize +1);
+                LOGGER_log("%s:%d:%s:ERROR: Cannot allocate %d bytes to contain new headers ", FL, __func__, totalsize +linesize + 1);
                 if (hinfo->headerline_buffer != NULL)
                     free(hinfo->headerline_buffer);
                 hinfo->headerline_buffer = NULL;
@@ -984,7 +984,7 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
                 if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Initial appending of head to dataspace headerline = NULL  realloc block = %p linestart = %p linesize = %d",FL, __func__, tmp, linestart, linesize);
                 hinfo->headerline_buffer = tmp;
                 totalsize = linesize;
-                PLD_strncpy(hinfo->headerline_buffer, linestart, (linesize +1));
+                PLD_strncpy(hinfo->headerline_buffer, linestart, (linesize + 1));
             } // If the global headerline is currently NULL
             else
             {
@@ -1332,7 +1332,7 @@ int MIMEH_recompose_multivalue( struct MIMEH_header_info *hinfo, char *header_na
             if (end_point != NULL)
             {
                 *end_point = end_point_char;
-                q = end_point +1;
+                q = end_point + 1;
             }
             else q = NULL;
 
@@ -1503,7 +1503,7 @@ int MIMEH_parse_header_parameter( struct MIMEH_header_info *hinfo,  char *data, 
                 // Eliminate multiple = separators.
                 // Reference: c030804-006a
                 //  PLD:DEV: 11/08/2004-15H15
-                while ((*(string +1) == '=')&&(*(string+1) != '\0')) { string++; MIMEH_set_defect(hinfo,MIMEH_DEFECT_MULTIPLE_EQUALS_SEPARATORS); }
+                while ((*(string + 1) == '=')&&(*(string+1) != '\0')) { string++; MIMEH_set_defect(hinfo,MIMEH_DEFECT_MULTIPLE_EQUALS_SEPARATORS); }
 
 
                 // Get the end of our string
@@ -1562,7 +1562,7 @@ int MIMEH_parse_header_parameter( struct MIMEH_header_info *hinfo,  char *data, 
                         {
                             if(MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: End of value found",FL, __func__);
                             *string_end = '\0';
-                            *data_end_point = string_end +1;
+                            *data_end_point = string_end + 1;
                         } else {
                             // If string_end == NULL
                             //
@@ -1576,7 +1576,7 @@ int MIMEH_parse_header_parameter( struct MIMEH_header_info *hinfo,  char *data, 
                             if (string_end != NULL)
                             {
                                 *string_end = '\0';
-                                *data_end_point = string_end +1;
+                                *data_end_point = string_end + 1;
                             } else {
                                 // There is no termination to the string, instead the
                                 //      end of the string is \0.
@@ -1594,7 +1594,7 @@ int MIMEH_parse_header_parameter( struct MIMEH_header_info *hinfo,  char *data, 
                         if (string_end != NULL)
                         {
                             *string_end = '\0';
-                            *data_end_point = string_end +1;
+                            *data_end_point = string_end + 1;
                         } else {
                             // There is no termination to the string, instead the
                             //      end of the string is \0.
@@ -2296,7 +2296,7 @@ int MIMEH_parse_generic( char *header_name, char *header_value, struct MIMEH_hea
             case ' ':
             case '\t':
             case '\0':
-                if(MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Located! Sanity up +1",FL, __func__);
+                if(MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Located! Sanity up + 1",FL, __func__);
                 snprintf( buffer, bsize, "%s", header_value );
                 hinfo->sanity++;
                 break;
@@ -2582,7 +2582,7 @@ void MIMEH_headers_process( struct MIMEH_header_info *hinfo )
             //      parse the data through our various parsing
             //      functions.
 
-            header_value = header_name_end_position +1;
+            header_value = header_name_end_position + 1;
             header_value_end_position = strpbrk( header_value, "\n\r" );
             if ( header_value_end_position != NULL )
             {
@@ -2820,7 +2820,7 @@ Displays a list of the located defects
 Changes:
 
 \------------------------------------------------------------------*/
-int MIMEH_dump_defects( struct MIMEH_header_info *hinfo )
+void MIMEH_dump_defects( struct MIMEH_header_info *hinfo )
 {
     int i;
 
@@ -2843,8 +2843,6 @@ int MIMEH_dump_defects( struct MIMEH_header_info *hinfo )
         }
 
     }
-
-    return 0;
 }
 
 /*-----------------------------------------------------------------\
