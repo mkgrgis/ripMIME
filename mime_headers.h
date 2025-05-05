@@ -151,6 +151,8 @@ struct MIMEH_header_info
 	int crlf_count; // 200811151149:PLD: Tally's the number of CRLF lines
 	int crcr_count; // 200811151149:PLD: Tally's the number of CRLF lines
 	int lf_count; // 200811151149:PLD: Tally's the number of  LF only lines
+
+	char *headerline_buffer;
 };
 
 #ifdef RIPMIME_V2XX
@@ -199,7 +201,7 @@ int MIMEH_headers_clearcount( struct MIMEH_header_info *hinfo );
 
 
 
-int MIMEH_headers_process( struct MIMEH_header_info *hinfo, char *headers );
+void MIMEH_headers_process( struct MIMEH_header_info *hinfo );
 int MIMEH_headers_cleanup();
 
 int MIMEH_parse_headers( FILE* header_file, FILE* original_header_file, FFGET_FILE *f, struct MIMEH_header_info *hinfo, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers );

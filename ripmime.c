@@ -726,7 +726,7 @@ int main (int argc, char **argv)
    // if our input filename wasn't specified, then we better let the user know!
    if (!glb.input_path)
    {
-       LOGGER_log("Error: No input file was specified\n");
+       LOGGER_log("Error: No input path or file was specified\n");
        return RIPMIME_ERROR_NO_INPUT_FILE;
    }
 

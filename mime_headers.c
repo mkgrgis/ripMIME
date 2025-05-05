@@ -57,8 +57,8 @@
 
 char *MIMEH_defect_description_array[_MIMEH_DEFECT_ARRAY_SIZE];
 
-int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MIMEH_header_info *hinfo, FFGET_FILE *f, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers, char* headerline );
-int MIMEH_headers_get(FILE* header_file, FILE* original_header_file, struct MIMEH_header_info *hinfo, FFGET_FILE *f, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers, char* headerline );
+int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MIMEH_header_info *hinfo, FFGET_FILE *f, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers );
+int MIMEH_headers_get(FILE* header_file, FILE* original_header_file, struct MIMEH_header_info *hinfo, FFGET_FILE *f, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers );
 int MIMEH_read_primary_headers( FILE* header_file, FILE* original_header_file, char *fname, struct MIMEH_header_info *hinfo, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers );
 
 struct MIMEH_globals {
@@ -70,7 +70,6 @@ struct MIMEH_globals {
 
     char subject[_MIMEH_STRLEN_MAX +1];
 
-    char *headerline;
     int test_mailbox;
     int debug;
     int webform;
@@ -124,8 +123,6 @@ Changes:
 void MIMEH_init( void )
 {
     glb.doubleCR = 0;
-    glb.headerline = NULL;
-
     glb.test_mailbox = 0;
     glb.debug = 0;
     glb.webform = 0;
@@ -882,7 +879,7 @@ Input:
 Output:
 Errors:
 ------------------------------------------------------------------------*/
-int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MIMEH_header_info *hinfo, FFGET_FILE *f, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers, char* headerline )
+int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MIMEH_header_info *hinfo, FFGET_FILE *f, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers )
 {
     char buffer[_MIMEH_STRLEN_MAX+1];
     int totalsize=0;
@@ -918,7 +915,7 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
         char *headerline_original = NULL;  // Holds the original header-form without decoding.
 
         search_count++;
-        glb.headerline = NULL;
+        hinfo->headerline_buffer = NULL;
         tmp_original = NULL;
 
         while ((fget_result=FFGET_fgets(buffer,_MIMEH_STRLEN_MAX, f)))
@@ -931,7 +928,7 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
             else if (strstr(linestart,"\r\r")) hinfo->crcr_count++;
             else if (strchr(linestart,'\n')) hinfo->lf_count++;
 
-            if (MIMEH_DNORMAL)LOGGER_log("%s:%d:%s: [CRLF=%d, CRCR=%d, LF=%d] Data In=[sz=%d:tb=%d:mem=%p]'%s'",FL, __func__, hinfo->crlf_count, hinfo->crcr_count, hinfo->lf_count, linesize, f->trueblank, glb.headerline, buffer);
+            if (MIMEH_DNORMAL)LOGGER_log("%s:%d:%s: [CRLF=%d, CRCR=%d, LF=%d] Data In=[sz=%d:tb=%d:mem=%p]'%s'",FL, __func__, hinfo->crlf_count, hinfo->crcr_count, hinfo->lf_count, linesize, f->trueblank, hinfo->headerline_buffer, buffer);
 
             // If we are being told to copy the input data to an output file
             //      then do so here (this is for the originals)
@@ -945,7 +942,7 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
             //  as it comes in from ffget, then do the storage here
             if (save_headers_original)
             {
-                if (MIMEH_DNORMAL) LOGGER_log("MIMEH_read_headers:DEBUG:Data-In:[%d:%d] '%s'", strlen(linestart), linesize, linestart);
+                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG:Data-In:[%d:%d] '%s'", FL, __func__, strlen(linestart), linesize, linestart);
                 tmp_original = realloc(headerline_original, totalsize_original+linesize+1);
                 if (tmp_original == NULL)
                 {
@@ -972,32 +969,32 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
 
             /** Normal processing of the headers now starts. **/
             if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: realloc'ing dataspace",FL, __func__);
-            tmp = realloc(glb.headerline, totalsize+linesize+1);
+            tmp = realloc(hinfo->headerline_buffer, totalsize+linesize+1);
             if (tmp == NULL)
             {
                 LOGGER_log("%s:%d:%s:ERROR: Cannot allocate %d bytes to contain new headers ", FL, __func__, totalsize +linesize +1);
-                if (glb.headerline != NULL)
-                    free(glb.headerline);
-                glb.headerline = NULL;
+                if (hinfo->headerline_buffer != NULL)
+                    free(hinfo->headerline_buffer);
+                hinfo->headerline_buffer = NULL;
                 return -1;
             }
 
-            if (glb.headerline == NULL)
+            if (hinfo->headerline_buffer == NULL)
             {
                 if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Initial appending of head to dataspace headerline = NULL  realloc block = %p linestart = %p linesize = %d",FL, __func__, tmp, linestart, linesize);
-                glb.headerline = tmp;
+                hinfo->headerline_buffer = tmp;
                 totalsize = linesize;
-                PLD_strncpy(glb.headerline, linestart, (linesize +1));
+                PLD_strncpy(hinfo->headerline_buffer, linestart, (linesize +1));
             } // If the global headerline is currently NULL
             else
             {
-                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Appending of new data to existing header  existing-headerline = %p  new realloc block = %p linestart = %p linesize = %d",FL, __func__, glb.headerline, tmp, linestart, linesize);
+                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Appending of new data to existing header  existing-headerline = %p  new realloc block = %p linestart = %p linesize = %d",FL, __func__, hinfo->headerline_buffer, tmp, linestart, linesize);
 
                 // Perform header unfolding by removing any CRLF's
                 //  of the last line if the first characters of the
                 //  newline are blank/space
 
-                glb.headerline = tmp;
+                hinfo->headerline_buffer = tmp;
 
                 if ((linestart < lineend)&&((*linestart == '\t')||(*linestart == ' ')))
                 {
@@ -1013,9 +1010,9 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
                     // 'p' holds the location at the -end- of the current headers where
                     //      we are going to append the newly read line
 
-                    p = glb.headerline +totalsize -1;
-                    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: unwrapping headers headers=%p, p = %p",FL, __func__, glb.headerline, p);
-                    while ((p >= glb.headerline)&&(( *p == '\n' )||( *p == '\r' )))
+                    p = hinfo->headerline_buffer + totalsize -1;
+                    if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: unwrapping headers headers=%p, p = %p",FL, __func__, hinfo->headerline_buffer, p);
+                    while ((p >= hinfo->headerline_buffer)&&(( *p == '\n' )||( *p == '\r' )))
                     {
                         if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Removing trailing space p=[%p]%c",FL, __func__, p, *p);
                         *p = '\0';
@@ -1023,30 +1020,30 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
                         totalsize--;
                     }
 
-                    p = glb.headerline +totalsize -1;
+                    p = hinfo->headerline_buffer + totalsize -1;
                 }
 
-                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Memcopying line, source = %p, dest = %p, size = %d", FL, __func__, linestart, glb.headerline +totalsize, linesize);
-                memcpy((glb.headerline +totalsize), linestart, (linesize));
+                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Memcopying line, source = %p, dest = %p, size = %d", FL, __func__, linestart, hinfo->headerline_buffer + totalsize, linesize);
+                memcpy((hinfo->headerline_buffer + totalsize), linestart, (linesize));
                 totalsize += linesize;
-                *(glb.headerline +totalsize) = '\0';
+                *(hinfo->headerline_buffer + totalsize) = '\0';
 
-            }   // If the glb.headerline already is allocated and we're appending to it.
+            }   // If the hinfo->headerline_buffer already is allocated and we're appending to it.
 
             if (f->trueblank)
             {
                 if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Trueblank line detected in header reading",FL, __func__);
-                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Headers /before/ decoding\n-------\n%s\n-------------------",FL, __func__, glb.headerline);
+                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Headers /before/ decoding\n-------\n%s\n-------------------",FL, __func__, hinfo->headerline_buffer);
 
-                MIMEH_fix_header_mistakes( glb.headerline );
-                MDECODE_decode_ISO( glb.headerline, totalsize  );
+                MIMEH_fix_header_mistakes( hinfo->headerline_buffer );
+                MDECODE_decode_ISO( hinfo->headerline_buffer, totalsize  );
 
-                if ((save_headers)&&(glb.headerline))
+                if ((save_headers)&&(hinfo->headerline_buffer))
                 {
                     if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Saving header line.",FL, __func__);
-                    fprintf(hinfo->header_file,"%s",glb.headerline);
+                    fprintf(hinfo->header_file,"%s",hinfo->headerline_buffer);
                 }
-                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Final Headers\n------------------\n%s---------------", FL, __func__, glb.headerline);
+                if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Final Headers\n------------------\n%s---------------", FL, __func__, hinfo->headerline_buffer);
                 //result = 1;
                 //result = 0;
                 break;
@@ -1078,14 +1075,14 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
             if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:ERROR: FFGET module ran out of input while reading headers",FL, __func__);
             /** If we're meant to be saving the headers, we better do that now, even though we couldn't
              ** read everything we wanted to **/
-            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: save_headers=%d totalsize=%d headerline=%s", FL, __func__, save_headers, totalsize, glb.headerline);
+            if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: save_headers=%d totalsize=%d headerline=%s", FL, __func__, save_headers, totalsize, hinfo->headerline_buffer);
 
-            if ((save_headers)&&(glb.headerline))
+            if ((save_headers)&&(hinfo->headerline_buffer))
             {
                 if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Saving header line.",FL, __func__);
-                MIMEH_fix_header_mistakes( glb.headerline );
-                MDECODE_decode_ISO( glb.headerline, totalsize  );
-                fprintf(hinfo->header_file,"%s",glb.headerline);
+                MIMEH_fix_header_mistakes( hinfo->headerline_buffer );
+                MDECODE_decode_ISO( hinfo->headerline_buffer, totalsize  );
+                fprintf(hinfo->header_file,"%s",hinfo->headerline_buffer);
             }
 
             result = -1;
@@ -1093,7 +1090,7 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
 
             if (glb.header_longsearch > 0) {
                 /** Test the headers for RFC compliance... **/
-                is_RFC822_headers =  MIMEH_are_headers_RFC822(glb.headerline);
+                is_RFC822_headers =  MIMEH_are_headers_RFC822(hinfo->headerline_buffer);
                 if (is_RFC822_headers == 0)
                 {
                     /** If not RFC822 headers, then clean up everything we allocated in here **/
@@ -1103,10 +1100,10 @@ int MIMEH_read_headers( FILE* header_file, FILE* original_header_file, struct MI
                         free(headerline_original);
                         headerline_original = NULL;
                     }
-                    if (glb.headerline != NULL)
+                    if (hinfo->headerline_buffer != NULL)
                     {
-                        free(glb.headerline);
-                        glb.headerline = NULL;
+                        free(hinfo->headerline_buffer);
+                        hinfo->headerline_buffer = NULL;
                     }
                 }
             }
@@ -2485,35 +2482,33 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIMEH_headers_process( struct MIMEH_header_info *hinfo, char *headers )
+void MIMEH_headers_process( struct MIMEH_header_info *hinfo )
 {
     /** scan through our headers string looking for information that is
      ** valid **/
-    char *h, *safehl;
+    char *safehl;
     char *current_header_position;
     int headerlength;
 
     if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Start [hinfo=%p]\n",FL, __func__, hinfo);
 
-    h = headers;
-
     /** Duplicate the headers for processing - this way we don't 'taint' the
      ** original headers during our searching / altering. **/
 
-    headerlength = strlen(h);
+    headerlength = strlen(hinfo->headerline_buffer);
     safehl = malloc(sizeof(char) *(headerlength+1));
-    PLD_strncpy(safehl, h, headerlength+1);
+    PLD_strncpy(safehl, hinfo->headerline_buffer, headerlength+1);
 
     if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Header length = %d\n", FL, __func__, headerlength);
 
-    MIMEH_strip_comments(h);
+    MIMEH_strip_comments(hinfo->headerline_buffer);
 
-    current_header_position = h;
+    current_header_position = hinfo->headerline_buffer;
 
     // Searching through the headers, we seek out header 'name:value;value;value' sets,
     //      Each set is then cleaned up, seperated and parsed.
 
-    while ((current_header_position != NULL)&&( current_header_position <= (h +headerlength) ))
+    while ((current_header_position != NULL)&&( current_header_position <= (hinfo->headerline_buffer +headerlength) ))
     {
         char *header_name, *header_value;
         char *header_name_end_position;
@@ -2667,7 +2662,6 @@ int MIMEH_headers_process( struct MIMEH_header_info *hinfo, char *headers )
 
     if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: END [hinfo=%p]\n", FL, __func__, hinfo);
 
-    return 0;
 }
 
 /*-----------------------------------------------------------------\
@@ -2710,7 +2704,7 @@ Comments:
 Changes:
 
 \------------------------------------------------------------------*/
-int MIMEH_headers_get(FILE* header_file, FILE* original_header_file,  struct MIMEH_header_info *hinfo, FFGET_FILE *f, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers, char* headerline )
+int MIMEH_headers_get(FILE* header_file, FILE* original_header_file,  struct MIMEH_header_info *hinfo, FFGET_FILE *f, RIPMIME_output *unpack_metadata, int save_headers_original, int save_headers )
 {
     int result = 0;
 
@@ -2751,7 +2745,7 @@ int MIMEH_headers_get(FILE* header_file, FILE* original_header_file,  struct MIM
     // Read from the file, the headers we need
     FFGET_set_watch_SDL(1);
 
-    result = MIMEH_read_headers(header_file, original_header_file, hinfo, f, unpack_metadata, save_headers_original, save_headers, glb.headerline);
+    result = MIMEH_read_headers(header_file, original_header_file, hinfo, f, unpack_metadata, save_headers_original, save_headers);
     FFGET_set_watch_SDL(0);
 
     if (hinfo->lf_count > hinfo->crlf_count) {
@@ -2762,17 +2756,12 @@ int MIMEH_headers_get(FILE* header_file, FILE* original_header_file,  struct MIM
     // flag this, free up the headers, and return.
     if (result == -1)
     {
-        if (glb.headerline)
-        {
-            free(glb.headerline);
-            glb.headerline = NULL;
-        }
         return result;
     }
 
     // If we came back with an OKAY result, but there's nothing in the
     //  headers, then flag off an error
-    if (glb.headerline == NULL)
+    if (hinfo->headerline_buffer == NULL)
     {
         if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: null headerline\n", FL, __func__);
         return 1;
@@ -2807,15 +2796,9 @@ int MIMEH_parse_headers( FILE* header_file, FILE* original_header_file, FFGET_FI
 
     /** Proceed to read, process and finish headers **/
     if(MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Getting headers",FL, __func__);
-    if ( result == 0 ) result = MIMEH_headers_get( header_file, original_header_file, hinfo, f, unpack_metadata, save_headers_original, save_headers, glb.headerline);
+    if ( result == 0 ) result = MIMEH_headers_get( header_file, original_header_file, hinfo, f, unpack_metadata, save_headers_original, save_headers);
     if(MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: Processing headers",FL, __func__);
-    if ( result == 0 ) result = MIMEH_headers_process( hinfo, glb.headerline );
-    if(MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: cleanup of headers",FL, __func__);
-    if (glb.headerline != NULL)
-    {
-        free(glb.headerline);
-        glb.headerline = NULL;
-    }
+    MIMEH_headers_process( hinfo );
     if (MIMEH_DNORMAL) LOGGER_log("%s:%d:%s:DEBUG: END [F=%p, hinfo=%p, sanity=%d]\n", FL, __func__, f, hinfo, hinfo->sanity);
 
     return result;
